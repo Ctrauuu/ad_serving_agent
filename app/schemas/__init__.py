@@ -7,6 +7,9 @@ from app.schemas.campaign import (
     CampaignStatus,
     CampaignUpdate,
     ConversionGoal,
+    GoalField,
+    GoalParseResult,
+    StructuredGoal,
 )
 
 __all__ = [
@@ -25,5 +28,8 @@ __all__ = [
     "CreativeRead",
     "GoalParseResult",
     "ProductRead",
+    "StructuredGoal",
+    "GoalField",
+    "GoalParseResult",
     "StructuredGoal",
 ]

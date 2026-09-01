@@ -14,7 +14,27 @@ CampaignStatus = Literal[
     "已暂停",
     "已结束",
 ]
+
+GoalField = Literal[
+"product",
+"audience",
+"budget",
+"cycle",
+"conversion_goal",
+"channels",
+"risk",
+]
+
 ConversionGoal = Literal["线索", "注册", "成交", "新品推广"]
+
+class StructuredGoal(BaseModel):
+    product: str = Field(min_length=1, description="推广产品")
+    audience: str = Field(min_length=1, description="目标人群")
+    budget: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
+    cycle: str = Field(min_length=1, description="投放周期")
+    conversion_goal: ConversionGoal
+    channels: list[str] = Field(min_length=1, description="投放渠道")
+    risk: str = Field(min_length=1, description="风险限制")
 
 class CampaignCreate(BaseModel):
     name: str = Field(min_length=1, max_length=128)
@@ -43,6 +63,7 @@ class CampaignUpdate(BaseModel):
     conversion_goal: ConversionGoal | None = None
     goal_text: str | None = Field(default=None, min_length=1)
     risk_limit: str | None = Field(default=None, max_length=256)
+    structured_goal: StructuredGoal | None = None
 
     @model_validator(mode="after")
     def validate_dates(self) -> Self:
@@ -51,7 +72,7 @@ class CampaignUpdate(BaseModel):
             and self.end_date is not None
             and self.end_date < self.start_date
         ):
-            raise ValueError("end_date 不能早于 start_date")
+            raise ValueError("结束日期不能早于开始日期")
         return self
 
 class CampaignRead(BaseModel):
@@ -76,16 +97,6 @@ class CampaignList(BaseModel):
     items: list[CampaignRead]
     total: int
 
-class StructuredGoal(BaseModel):
-    product: str = Field(min_length=1, description="推广产品")
-    audience: str = Field(min_length=1, description="目标人群")
-    budget: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
-    cycle: str = Field(min_length=1, description="投放周期")
-    conversion_goal: ConversionGoal
-    channels: list[str] = Field(min_length=1, description="投放渠道")
-    risk: str = Field(min_length=1, description="风险限制")
-
-
 class GoalParseResult(BaseModel):
     structured_goal: StructuredGoal | None = None
-    missing_fields: list[str] = Field(default_factory=list)
+    missing_fields: list[GoalField] = Field(default_factory=list)
