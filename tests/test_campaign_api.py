@@ -59,7 +59,7 @@ def test_create_campaign_returns_unified_response(monkeypatch) -> None:
         json={
             "name": "新品推广",
             "product_id": 1,
-            "budget": "80000.00",
+            "budget_total": "80000.00",
             "start_date": "2026-09-01",
             "end_date": "2026-09-30",
             "conversion_goal": "线索",
@@ -225,3 +225,193 @@ def test_only_investor_can_confirm_goal() -> None:
 
     assert response.status_code == 403
     assert response.json()["message"] == "仅投放人员可以确认结构化目标"
+
+
+def test_generate_strategy_returns_strategy_and_evidence(
+    monkeypatch,
+) -> None:
+    async def fake_get_campaign(
+        session,
+        campaign_id,
+        current_user,
+    ):
+        campaign = make_campaign()
+        campaign.status = "目标已结构化"
+        campaign.structured_goal = {
+            "product": "企业HR系统",
+            "audience": "企业HR负责人",
+            "budget": 80000,
+            "cycle": "2026年9月",
+            "conversion_goal": "线索",
+            "channels": ["信息流"],
+            "risk": "单条线索成本不超过300元",
+        }
+        return campaign
+
+    async def fake_generate_strategy(
+        session,
+        campaign,
+    ):
+        return {
+            "strategy": {
+                "id": 21,
+                "campaign_id": campaign.id,
+                "version": 1,
+                "status": "待确认",
+            },
+            "evidence": [
+                {
+                    "evidence_type": "渠道规则",
+                    "explanation": (
+                        "信息流适合线索获取"
+                    ),
+                }
+            ],
+        }
+
+    monkeypatch.setattr(
+        "app.api.v1.campaigns.get_campaign",
+        fake_get_campaign,
+    )
+    monkeypatch.setattr(
+        "app.api.v1.campaigns.generate_strategy",
+        fake_generate_strategy,
+    )
+
+    response = TestClient(app).post(
+        "/api/v1/campaigns/8/strategy/generate"
+    )
+
+    assert response.status_code == 200
+    assert response.json()["code"] == 0
+    assert (
+        response.json()["data"]["strategy"]["version"]
+        == 1
+    )
+    assert (
+        response.json()["data"]["evidence"][0][
+            "evidence_type"
+        ]
+        == "渠道规则"
+    )
+
+def test_get_strategy_returns_latest_detail(
+    monkeypatch,
+) -> None:
+    async def fake_get_campaign(
+        session,
+        campaign_id,
+        current_user,
+    ):
+        return make_campaign()
+
+    async def fake_get_latest_strategy(
+        session,
+        campaign_id,
+    ):
+        return {
+            "strategy": {
+                "id": 21,
+                "campaign_id": campaign_id,
+                "version": 2,
+                "status": "待确认",
+            },
+            "evidence": [
+                {
+                    "evidence_type": "历史活动",
+                    "explanation": "参考历史活动#5",
+                }
+            ],
+        }
+
+    monkeypatch.setattr(
+        "app.api.v1.campaigns.get_campaign",
+        fake_get_campaign,
+    )
+    monkeypatch.setattr(
+        "app.api.v1.campaigns.get_latest_strategy",
+        fake_get_latest_strategy,
+    )
+
+    response = TestClient(app).get(
+        "/api/v1/campaigns/8/strategy"
+    )
+
+    assert response.status_code == 200
+    assert response.json()["code"] == 0
+    assert (
+        response.json()["data"]["strategy"]["version"]
+        == 2
+    )
+    assert (
+        response.json()["data"]["evidence"][0][
+            "evidence_type"
+        ]
+        == "历史活动"
+    )
+
+def test_only_leader_can_confirm_strategy() -> None:
+    response = TestClient(app).post(
+        "/api/v1/campaigns/8/strategy/confirm"
+    )
+
+    assert response.status_code == 403
+    assert response.json()["message"] == "权限不足"
+
+
+def test_leader_can_confirm_strategy(
+    monkeypatch,
+) -> None:
+    app.dependency_overrides[
+        get_current_user
+    ] = lambda: User(
+        id=3,
+        role="投放负责人",
+        status="启用",
+    )
+
+    async def fake_get_campaign(
+        session,
+        campaign_id,
+        current_user,
+    ):
+        campaign = make_campaign()
+        campaign.status = "策略生成中"
+        return campaign
+
+    async def fake_confirm_strategy(
+        session,
+        campaign,
+        confirmed_by,
+    ):
+        assert confirmed_by == 3
+
+        return {
+            "campaign_id": campaign.id,
+            "strategy_id": 21,
+            "status": "策略已确认",
+        }
+
+    monkeypatch.setattr(
+        "app.api.v1.campaigns.get_campaign",
+        fake_get_campaign,
+    )
+    monkeypatch.setattr(
+        "app.api.v1.campaigns.confirm_strategy",
+        fake_confirm_strategy,
+    )
+
+    response = TestClient(app).post(
+        "/api/v1/campaigns/8/strategy/confirm"
+    )
+
+    assert response.status_code == 200
+    assert response.json()["code"] == 0
+    assert (
+        response.json()["data"]["strategy_id"]
+        == 21
+    )
+    assert (
+        response.json()["data"]["status"]
+        == "策略已确认"
+    )

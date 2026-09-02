@@ -1,14 +1,32 @@
 from typing import Annotated
-from app.models import User
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
-from app.api.dependencies.auth import CurrentUser, SessionDep, require_role
+
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Path,
+    Query,
+    status,
+)
+from fastapi.responses import JSONResponse
+
+from app.api.dependencies.auth import (
+    CurrentUser,
+    SessionDep,
+    require_role,
+)
 from app.api.routing import UnifiedResponseRoute
+from app.core.responses import error
+from app.models import User
 from app.schemas import (
     CampaignCreate,
     CampaignList,
     CampaignRead,
     CampaignStatus,
     CampaignUpdate,
+    GoalParseResult,
+    StrategyDetail,
+    StrategyConfirmResult,
 )
 from app.services.campaign import (
     create_campaign,
@@ -16,14 +34,19 @@ from app.services.campaign import (
     list_campaigns,
     update_campaign,
 )
-
-from fastapi.responses import JSONResponse
-from app.core.responses import error
-from app.schemas import GoalParseResult
 from app.services.goal import parse_goal_text
+from app.services.strategy import (
+    confirm_strategy,
+    generate_strategy,
+    get_latest_strategy,
+)
 
 
 CampaignCreator = Annotated[User,Depends(require_role("投放人员"))]
+StrategyConfirmer = Annotated[
+    User,
+    Depends(require_role("投放负责人")),
+]
 CampaignId = Annotated[int,Path(gt=0)]
 
 router = APIRouter(
@@ -42,6 +65,7 @@ async def campaign_list(
         CampaignStatus | None,
         Query(alias="status"),
     ] = None,
+    keyword: Annotated[str | None, Query(max_length=128)] = None,
 ) -> CampaignList:
     campaigns, total = await list_campaigns(
         session,
@@ -49,6 +73,7 @@ async def campaign_list(
         page=page,
         page_size=page_size,
         status=status_filter,
+        keyword=keyword,
     )
 
     return CampaignList(
@@ -167,3 +192,107 @@ async def campaign_parse_goal(
         )
 
     return result
+
+
+@router.post(
+    "/{campaign_id}/strategy/generate",
+    response_model=None,
+)
+async def campaign_generate_strategy(
+    campaign_id: CampaignId,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> StrategyDetail:
+    campaign = await get_campaign(
+        session,
+        campaign_id,
+        current_user,
+    )
+
+    if campaign is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="活动不存在",
+        )
+
+    try:
+        return await generate_strategy(
+            session,
+            campaign,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=(
+                status.HTTP_422_UNPROCESSABLE_CONTENT
+            ),
+            detail=str(exc),
+        ) from exc
+
+@router.get(
+    "/{campaign_id}/strategy",
+    response_model=None,
+)
+async def campaign_strategy_detail(
+    campaign_id: CampaignId,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> StrategyDetail:
+    campaign = await get_campaign(
+        session,
+        campaign_id,
+        current_user,
+    )
+
+    if campaign is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="活动不存在",
+        )
+
+    result = await get_latest_strategy(
+        session,
+        campaign.id,
+    )
+
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="策略不存在",
+        )
+
+    return result
+
+@router.post(
+    "/{campaign_id}/strategy/confirm",
+    response_model=None,
+)
+async def campaign_confirm_strategy(
+    campaign_id: CampaignId,
+    session: SessionDep,
+    current_user: StrategyConfirmer,
+) -> StrategyConfirmResult:
+    campaign = await get_campaign(
+        session,
+        campaign_id,
+        current_user,
+    )
+
+    if campaign is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="活动不存在",
+        )
+
+    try:
+        return await confirm_strategy(
+            session=session,
+            campaign=campaign,
+            confirmed_by=current_user.id,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=(
+                status.HTTP_422_UNPROCESSABLE_CONTENT
+            ),
+            detail=str(exc),
+        ) from exc

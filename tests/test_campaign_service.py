@@ -69,6 +69,7 @@ async def test_campaign_list_is_owner_scoped() -> None:
         current_user=user,
         page=1,
         page_size=20,
+        keyword="新品",
     )
 
     count_statement = session.scalar.await_args.args[0]
@@ -78,6 +79,7 @@ async def test_campaign_list_is_owner_scoped() -> None:
     assert total == 0
     assert "campaign.owner_id" in str(count_statement)
     assert "campaign.owner_id" in str(list_statement)
+    assert "campaign.name LIKE" in str(count_statement)
 
 
 @pytest.mark.asyncio

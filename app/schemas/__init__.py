@@ -11,6 +11,17 @@ from app.schemas.campaign import (
     GoalParseResult,
     StructuredGoal,
 )
+from app.schemas.strategy import (
+    AdGroupPlan,
+    ChannelChoice,
+    EvidenceType,
+    StrategyDetail,
+    StrategyEvidenceRead,
+    StrategyPlan,
+    StrategyRead,
+    StrategyStatus,
+    StrategyConfirmResult,
+)
 
 __all__ = [
     "CampaignCreate",
@@ -32,4 +43,13 @@ __all__ = [
     "GoalField",
     "GoalParseResult",
     "StructuredGoal",
+    "AdGroupPlan",
+    "ChannelChoice",
+    "EvidenceType",
+    "StrategyDetail",
+    "StrategyEvidenceRead",
+    "StrategyPlan",
+    "StrategyRead",
+    "StrategyStatus",
+    "StrategyConfirmResult",
 ]

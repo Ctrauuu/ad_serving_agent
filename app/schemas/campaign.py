@@ -2,7 +2,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Literal, Self
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 
 CampaignStatus = Literal[
     "草稿",
@@ -39,7 +39,10 @@ class StructuredGoal(BaseModel):
 class CampaignCreate(BaseModel):
     name: str = Field(min_length=1, max_length=128)
     product_id: int = Field(gt=0)
-    budget: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
+    budget: Decimal = Field(
+        gt=0, max_digits=12, decimal_places=2,
+        validation_alias=AliasChoices("budget", "budget_total"),
+    )
     start_date: date
     end_date: date
     conversion_goal: ConversionGoal
@@ -56,7 +59,8 @@ class CampaignUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=128)
     product_id: int | None = Field(default=None, gt=0)
     budget: Decimal | None = Field(
-        default=None, gt=0, max_digits=12, decimal_places=2
+        default=None, gt=0, max_digits=12, decimal_places=2,
+        validation_alias=AliasChoices("budget", "budget_total"),
     )
     start_date: date | None = None
     end_date: date | None = None

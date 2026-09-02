@@ -53,7 +53,8 @@ async def list_campaigns(
     current_user:User,
     page:int,
     page_size:int,
-    status:CampaignStatus | None = None
+    status:CampaignStatus | None = None,
+    keyword: str | None = None,
 ) -> tuple[list[Campaign], int]:
     filters=[]
 
@@ -62,6 +63,8 @@ async def list_campaigns(
 
     if status:
         filters.append(Campaign.status==status)
+    if keyword and keyword.strip():
+        filters.append(Campaign.name.like(f"%{keyword.strip()}%"))
 
     total = await session.scalar(
         select(func.count()).select_from(Campaign).where(*filters)
