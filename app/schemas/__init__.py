@@ -23,6 +23,31 @@ from app.schemas.strategy import (
     StrategyConfirmResult,
 )
 
+from app.schemas.ad_task import (
+    AdGroupStatusRead,
+    AdGroupTaskRead,
+    AdPlanTaskRead,
+    AdTaskCreateRequest,
+    AdTaskCreateResult,
+    AdTaskStatusResult,
+    KeywordRead,
+)
+
+from app.schemas.metric import (
+    BudgetConsumptionRead,
+    BudgetTargetType,
+    CampaignBudgetResult,
+    MetricDimension,
+    MetricSyncError,
+    MetricSyncResult,
+    MetricTrendPoint,
+    MetricTrendResult,
+    MetricTrendSeries,
+    MetricTrendWindow,
+    RealtimeMetric,
+    RealtimeMetricResult,
+)
+
 __all__ = [
     "CampaignCreate",
     "CampaignList",
@@ -52,4 +77,23 @@ __all__ = [
     "StrategyRead",
     "StrategyStatus",
     "StrategyConfirmResult",
+    "AdGroupTaskRead",
+    "AdPlanTaskRead",
+    "AdTaskCreateRequest",
+    "AdTaskCreateResult",
+    "KeywordRead",
+    "AdTaskStatusResult",
+    "AdGroupStatusRead",
+    "BudgetConsumptionRead",
+    "BudgetTargetType",
+    "CampaignBudgetResult",
+    "MetricSyncError",
+    "MetricSyncResult",
+    "MetricDimension",
+    "RealtimeMetric",
+    "RealtimeMetricResult",
+    "MetricTrendPoint",
+    "MetricTrendResult",
+    "MetricTrendSeries",
+    "MetricTrendWindow",
 ]

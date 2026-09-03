@@ -91,6 +91,98 @@ def test_missing_campaign_returns_404(monkeypatch) -> None:
         "data": None,
     }
 
+
+def test_manual_metric_sync_returns_result(monkeypatch) -> None:
+    from app.schemas import MetricSyncResult
+
+    campaign = make_campaign()
+
+    async def fake_get_campaign(*_):
+        return campaign
+
+    async def fake_sync_metrics(session, selected_campaign):
+        assert selected_campaign is campaign
+        return MetricSyncResult(
+            campaign_id=8,
+            status="success",
+            synced_groups=2,
+            failed_groups=0,
+            stale_groups=0,
+            metric_rows=12,
+            data_time=datetime(2026, 9, 3, 13, 30),
+            errors=[],
+        )
+
+    monkeypatch.setattr(
+        "app.api.v1.campaigns.get_campaign",
+        fake_get_campaign,
+    )
+    monkeypatch.setattr(
+        "app.api.v1.campaigns.sync_campaign_metrics",
+        fake_sync_metrics,
+    )
+
+    response = TestClient(app).post(
+        "/api/v1/campaigns/8/metrics/sync"
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"]["synced_groups"] == 2
+
+
+def test_realtime_metrics_rejects_unknown_dimension() -> None:
+    response = TestClient(app).get(
+        "/api/v1/campaigns/8/metrics/realtime",
+        params={"dimension": "unknown"},
+    )
+
+    assert response.status_code == 422
+
+
+def test_metric_trend_rejects_unknown_window() -> None:
+    response = TestClient(app).get(
+        "/api/v1/campaigns/8/metrics/trend",
+        params={"window": "week"},
+    )
+
+    assert response.status_code == 422
+
+
+def test_campaign_budget_returns_redis_state(monkeypatch) -> None:
+    from app.schemas import CampaignBudgetResult
+
+    async def fake_get_campaign(*_):
+        return make_campaign()
+
+    async def fake_get_campaign_budget(campaign_id):
+        return CampaignBudgetResult(
+            campaign_id=campaign_id,
+            data_time=None,
+            is_stale=True,
+            items=[],
+        )
+
+    monkeypatch.setattr(
+        "app.api.v1.campaigns.get_campaign",
+        fake_get_campaign,
+    )
+    monkeypatch.setattr(
+        "app.api.v1.campaigns.get_campaign_budget",
+        fake_get_campaign_budget,
+    )
+
+    response = TestClient(app).get(
+        "/api/v1/campaigns/8/budget"
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"] == {
+        "campaign_id": 8,
+        "data_time": None,
+        "is_stale": True,
+        "items": [],
+    }
+
 def test_parse_goal_returns_missing_fields(monkeypatch) -> None:
     async def fake_get_campaign(session, campaign_id, current_user):
         return make_campaign()
@@ -415,3 +507,107 @@ def test_leader_can_confirm_strategy(
         response.json()["data"]["status"]
         == "策略已确认"
     )
+
+
+def test_investor_can_create_ad_tasks(monkeypatch) -> None:
+    async def fake_get_campaign(
+        session,
+        campaign_id,
+        current_user,
+    ):
+        campaign = make_campaign()
+        campaign.status = "策略已确认"
+        return campaign
+
+    async def fake_create_ad_tasks(
+        session,
+        campaign,
+        form,
+    ):
+        assert form.audience_id == 1
+        assert form.creative_id == 1
+        assert form.bid == Decimal("5")
+        return {
+            "campaign_id": campaign.id,
+            "status": "投放中",
+            "plans": [],
+        }
+
+    monkeypatch.setattr(
+        "app.api.v1.campaigns.get_campaign",
+        fake_get_campaign,
+    )
+    monkeypatch.setattr(
+        "app.api.v1.campaigns.create_ad_tasks",
+        fake_create_ad_tasks,
+    )
+
+    response = TestClient(app).post(
+        "/api/v1/campaigns/8/ad-tasks/create",
+        json={
+            "audience_id": 1,
+            "creative_id": 1,
+            "bid": "5.00",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"]["status"] == "投放中"
+
+
+def test_only_investor_can_create_ad_tasks() -> None:
+    app.dependency_overrides[get_current_user] = lambda: User(
+        id=3,
+        role="投放负责人",
+        status="启用",
+    )
+
+    response = TestClient(app).post(
+        "/api/v1/campaigns/8/ad-tasks/create",
+        json={
+            "audience_id": 1,
+            "creative_id": 1,
+            "bid": "5.00",
+        },
+    )
+
+    assert response.status_code == 403
+    assert response.json()["message"] == "权限不足"
+
+
+def test_list_ad_tasks_returns_task_tree(monkeypatch) -> None:
+    async def fake_get_campaign(
+        session,
+        campaign_id,
+        current_user,
+    ):
+        campaign = make_campaign()
+        campaign.status = "投放中"
+        return campaign
+
+    async def fake_list_ad_tasks(session, campaign):
+        return {
+            "campaign_id": campaign.id,
+            "status": campaign.status,
+            "plans": [],
+        }
+
+    monkeypatch.setattr(
+        "app.api.v1.campaigns.get_campaign",
+        fake_get_campaign,
+    )
+    monkeypatch.setattr(
+        "app.api.v1.campaigns.list_ad_tasks",
+        fake_list_ad_tasks,
+    )
+
+    response = TestClient(app).get(
+        "/api/v1/campaigns/8/ad-tasks"
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"] == {
+        "campaign_id": 8,
+        "status": "投放中",
+        "plans": [],
+    }

@@ -10,23 +10,38 @@ from app.core.exceptions import register_exception_handlers
 from app.infrastructure.database import check_database, engine
 from app.infrastructure.milvus import milvus_client
 from app.infrastructure.redis import redis_client
+from app.tasks import (
+    start_metric_scheduler,
+    stop_metric_scheduler,
+)
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+async def lifespan(
+    _: FastAPI,
+) -> AsyncIterator[None]:
     try:
         await check_database()
-        await redis_client.ping() # type: ignore
-        await run_in_threadpool(milvus_client.initialize)
+        await redis_client.ping()  # type: ignore
+        await run_in_threadpool(
+            milvus_client.initialize
+        )
+        start_metric_scheduler()
     except Exception as exc:
         await redis_client.aclose()
         await engine.dispose()
-        raise RuntimeError(f"Dependency startup check failed: {exc}") from exc
+        raise RuntimeError(
+            f"Dependency startup check failed: {exc}"
+        ) from exc
+
     try:
         yield
     finally:
+        stop_metric_scheduler()
         await redis_client.aclose()
-        await run_in_threadpool(milvus_client.close)
+        await run_in_threadpool(
+            milvus_client.close
+        )
         await engine.dispose()
 
 

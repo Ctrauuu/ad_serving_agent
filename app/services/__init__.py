@@ -18,7 +18,12 @@ from app.services.strategy import (
     generate_strategy,
     get_latest_strategy,
 )
-
+from app.services.metric import (
+    get_campaign_budget,
+    get_metric_trend,
+    get_realtime_metrics,
+    sync_campaign_metrics,
+)
 
 __all__ = [
     "authenticate_user",
@@ -35,4 +40,8 @@ __all__ = [
     "generate_strategy",
     "get_latest_strategy",
     "confirm_strategy",
+    "get_campaign_budget",
+    "sync_campaign_metrics",
+    "get_realtime_metrics",
+    "get_metric_trend",
 ]

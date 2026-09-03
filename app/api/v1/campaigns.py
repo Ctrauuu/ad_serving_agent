@@ -27,6 +27,14 @@ from app.schemas import (
     GoalParseResult,
     StrategyDetail,
     StrategyConfirmResult,
+    AdTaskCreateRequest,
+    AdTaskCreateResult,
+    CampaignBudgetResult,
+    MetricSyncResult,
+    MetricDimension,
+    RealtimeMetricResult,
+    MetricTrendResult,
+    MetricTrendWindow,
 )
 from app.services.campaign import (
     create_campaign,
@@ -39,6 +47,16 @@ from app.services.strategy import (
     confirm_strategy,
     generate_strategy,
     get_latest_strategy,
+)
+from app.services.ad_task import (
+    create_ad_tasks,
+    list_ad_tasks,
+)
+from app.services.metric import (
+    get_campaign_budget,
+    get_metric_trend,
+    get_realtime_metrics,
+    sync_campaign_metrics,
 )
 
 
@@ -296,3 +314,191 @@ async def campaign_confirm_strategy(
             ),
             detail=str(exc),
         ) from exc
+
+@router.post(
+    "/{campaign_id}/ad-tasks/create",
+    response_model=None,
+)
+async def campaign_create_ad_tasks(
+    campaign_id: CampaignId,
+    form: AdTaskCreateRequest,
+    session: SessionDep,
+    current_user: CampaignCreator,
+) -> AdTaskCreateResult:
+    campaign = await get_campaign(
+        session,
+        campaign_id,
+        current_user,
+    )
+
+    if campaign is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="活动不存在",
+        )
+
+    try:
+        return await create_ad_tasks(
+            session=session,
+            campaign=campaign,
+            form=form,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=(
+                status.HTTP_422_UNPROCESSABLE_CONTENT
+            ),
+            detail=str(exc),
+        ) from exc
+
+
+@router.get(
+    "/{campaign_id}/ad-tasks",
+    response_model=None,
+)
+async def campaign_ad_task_list(
+    campaign_id: CampaignId,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> AdTaskCreateResult:
+    campaign = await get_campaign(
+        session,
+        campaign_id,
+        current_user,
+    )
+
+    if campaign is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="活动不存在",
+        )
+
+    return await list_ad_tasks(
+        session,
+        campaign,
+    )
+
+@router.post(
+    "/{campaign_id}/metrics/sync",
+    response_model=None,
+)
+async def campaign_sync_metrics(
+    campaign_id: CampaignId,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> MetricSyncResult:
+    campaign = await get_campaign(
+        session,
+        campaign_id,
+        current_user,
+    )
+
+    if campaign is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="活动不存在",
+        )
+
+    try:
+        return await sync_campaign_metrics(
+            session,
+            campaign,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=(
+                status.HTTP_422_UNPROCESSABLE_CONTENT
+            ),
+            detail=str(exc),
+        ) from exc
+
+@router.get(
+    "/{campaign_id}/metrics/realtime",
+    response_model=None,
+)
+async def campaign_realtime_metrics(
+    campaign_id: CampaignId,
+    session: SessionDep,
+    current_user: CurrentUser,
+    dimension: Annotated[
+        MetricDimension,
+        Query(),
+    ] = "campaign",
+) -> RealtimeMetricResult:
+    campaign = await get_campaign(
+        session,
+        campaign_id,
+        current_user,
+    )
+
+    if campaign is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="活动不存在",
+        )
+
+    return await get_realtime_metrics(
+        campaign.id,
+        dimension,
+    )
+
+@router.get(
+    "/{campaign_id}/metrics/trend",
+    response_model=None,
+)
+async def campaign_metric_trend(
+    campaign_id: CampaignId,
+    session: SessionDep,
+    current_user: CurrentUser,
+    dimension: Annotated[
+        MetricDimension,
+        Query(),
+    ] = "campaign",
+    window: Annotated[
+        MetricTrendWindow,
+        Query(),
+    ] = "hour",
+) -> MetricTrendResult:
+    campaign = await get_campaign(
+        session,
+        campaign_id,
+        current_user,
+    )
+
+    if campaign is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="活动不存在",
+        )
+
+    return await get_metric_trend(
+        session,
+        campaign.id,
+        dimension,
+        window,
+    )
+
+@router.get(
+    "/{campaign_id}/budget",
+    response_model=None,
+)
+async def campaign_budget(
+    campaign_id: CampaignId,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> CampaignBudgetResult:
+    campaign = await get_campaign(
+        session,
+        campaign_id,
+        current_user,
+    )
+
+    if campaign is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="活动不存在",
+        )
+
+    return await get_campaign_budget(
+        campaign.id
+    )

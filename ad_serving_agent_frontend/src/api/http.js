@@ -10,14 +10,14 @@ http.interceptors.request.use((config) => {
 })
 
 http.interceptors.response.use(
-  ({ data }) => {
+  ({ data, config }) => {
     if (data.code === 0) return data.data
     const error = new Error(data.message || '请求失败')
-    ElMessage.error(error.message)
+    if (!config.silent) ElMessage.error(error.message)
     return Promise.reject(error)
   },
   (error) => {
-    ElMessage.error(error.response?.data?.message || error.message || '网络异常')
+    if (!error.config?.silent) ElMessage.error(error.response?.data?.message || error.message || '网络异常')
     return Promise.reject(error)
   },
 )

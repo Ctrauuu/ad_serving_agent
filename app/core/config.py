@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     dashscope_model: str = "qwen-plus"
     dashscope_embedding_model: str = "text-embedding-v3"
     dashscope_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    ad_platform_mcp_url: str = (
+    "http://127.0.0.1:8001/mcp"
+    )
     
 
 

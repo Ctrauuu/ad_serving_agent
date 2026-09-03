@@ -126,8 +126,8 @@ onMounted(async () => {
         <el-table-column label="负责人" min-width="126">
           <template #default="{ row }">{{ ownerName(row) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="88" fixed="right">
-          <template #default="{ row }"><el-button link type="primary" @click="router.push(`/campaigns/${row.id}/strategy`)">查看</el-button></template>
+        <el-table-column label="操作" width="130" fixed="right">
+          <template #default="{ row }"><el-button link type="primary" @click="router.push(`/campaigns/${row.id}/strategy`)">查看</el-button><el-button link type="primary" @click="router.push(`/campaigns/${row.id}/ad-tasks`)">任务</el-button></template>
         </el-table-column>
       </el-table>
       <div v-if="total" class="pagination">
