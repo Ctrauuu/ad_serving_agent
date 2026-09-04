@@ -51,6 +51,14 @@ _STRATEGY_SYSTEM_PROMPT = f"""
 
 
 def _to_json(value: object) -> str:
+    """序列化提示词数据。
+
+    Args:
+        value: 待处理的输入值。
+
+    Returns:
+        返回类型为 str 的执行结果。
+    """
     return json.dumps(
         value,
         ensure_ascii=False,
@@ -65,6 +73,18 @@ async def _generate_plan(
     channels: list[dict],
     history: list[dict],
 ) -> StrategyPlan:
+    """调用模型生成结构化策略。
+
+    Args:
+        goal: 结构化投放目标。
+        budget_limit: 活动预算上限。
+        product: 产品信息。
+        channels: 候选渠道。
+        history: 历史策略。
+
+    Returns:
+        返回类型为 StrategyPlan 的执行结果。
+    """
     user_content = f"""
 活动目标：
 {_to_json(goal)}
@@ -109,6 +129,16 @@ def _validate_strategy_plan(
     budget_limit: Decimal,
     channels_by_id: dict[int, Channel],
 ) -> None:
+    """校验生成策略。
+
+    Args:
+        plan: 广告计划对象。
+        budget_limit: 活动预算上限。
+        channels_by_id: 函数输入参数。
+
+    Returns:
+        无返回值。
+    """
     total_budget = sum(
         plan.budget_split.values(),
         Decimal("0"),
@@ -139,6 +169,15 @@ async def generate_strategy(
     session: AsyncSession,
     campaign: Campaign,
 ) -> StrategyDetail:
+    """召回依据并生成策略。
+
+    Args:
+        session: 数据库异步会话。
+        campaign: 活动 ORM 对象。
+
+    Returns:
+        返回类型为 StrategyDetail 的执行结果。
+    """
     if campaign.status not in {
         "目标已结构化",
         "策略生成中",
@@ -482,6 +521,15 @@ async def get_latest_strategy(
     session: AsyncSession,
     campaign_id: int,
 ) -> StrategyDetail | None:
+    """查询最新策略及依据。
+
+    Args:
+        session: 数据库异步会话。
+        campaign_id: 活动编号。
+
+    Returns:
+        返回类型为 StrategyDetail | None 的执行结果。
+    """
     strategy = await session.scalar(
         select(Strategy)
         .where(
@@ -527,6 +575,16 @@ async def confirm_strategy(
     campaign: Campaign,
     confirmed_by: int,
 ) -> StrategyConfirmResult:
+    """确认策略并推进活动状态。
+
+    Args:
+        session: 数据库异步会话。
+        campaign: 活动 ORM 对象。
+        confirmed_by: 确认人编号。
+
+    Returns:
+        返回类型为 StrategyConfirmResult 的执行结果。
+    """
     if campaign.status != "策略生成中":
         raise ValueError(
             "当前活动状态不允许确认策略"
@@ -591,4 +649,3 @@ async def confirm_strategy(
         strategy_id=strategy.id,
         status="策略已确认",
     )
-

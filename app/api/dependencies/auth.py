@@ -14,6 +14,11 @@ bearer_scheme = HTTPBearer(auto_error=False)
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 def unauthorized_exception() -> HTTPException:
+    """构造未认证 HTTP 异常。
+
+    Returns:
+        构造完成的 HTTP 异常。
+    """
     return HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Unauthorized",
@@ -32,6 +37,15 @@ async def get_current_user(
         ],
         session: SessionDep,
 ) -> User:
+    """解析令牌并加载当前用户。
+
+    Args:
+        credentials: Bearer 认证凭据。
+        session: 数据库异步会话。
+
+    Returns:
+        返回类型为 User 的执行结果。
+    """
     if credentials is None:
         raise unauthorized_exception()
 
@@ -54,7 +68,23 @@ async def get_current_user(
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 def require_role(required_role: Role):
+    """创建指定角色的权限依赖。
+
+    Args:
+        required_role: 要求的用户角色。
+
+    Returns:
+        返回类型为 object 的执行结果。
+    """
     async def role_dependency(current_user: CurrentUser) -> User:
+        """校验当前用户角色。
+
+        Args:
+            current_user: 当前登录用户。
+
+        Returns:
+            返回类型为 User 的执行结果。
+        """
         if current_user.role != required_role:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

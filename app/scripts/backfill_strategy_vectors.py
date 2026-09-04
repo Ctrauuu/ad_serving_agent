@@ -11,6 +11,11 @@ from app.services.embedding import embed_goal
 
 
 async def backfill_strategy_vectors() -> tuple[int, int]:
+    """回填历史策略向量。
+
+    Returns:
+        返回类型为 tuple[int, int] 的执行结果。
+    """
     indexed_count = 0
     skipped_count = 0
 
@@ -65,6 +70,11 @@ async def backfill_strategy_vectors() -> tuple[int, int]:
 
 
 async def main() -> None:
+    """执行命令行脚本入口。
+
+    Returns:
+        无返回值。
+    """
     milvus_client.initialize()
 
     try:

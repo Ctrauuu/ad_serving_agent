@@ -20,6 +20,15 @@ async def product_list(
     session: SessionDep,
     _:CurrentUser,
 ) -> list[ProductRead]:
+    """查询可用产品。
+
+    Args:
+        session: 数据库异步会话。
+        _: 未使用的框架注入参数。
+
+    Returns:
+        返回类型为 list[ProductRead] 的执行结果。
+    """
     products = await list_products(session)
 
     return [
@@ -32,6 +41,15 @@ async def channel_list(
     session:SessionDep,
     _:CurrentUser,
 ) -> list[ChannelRead]:
+    """查询可用渠道。
+
+    Args:
+        session: 数据库异步会话。
+        _: 未使用的框架注入参数。
+
+    Returns:
+        返回类型为 list[ChannelRead] 的执行结果。
+    """
     channels = await list_channels(session)
 
     return [
@@ -44,6 +62,15 @@ async def audience_list(
     session: SessionDep,
     _: CurrentUser,
 ) -> list[AudienceRead]:
+    """查询可用人群。
+
+    Args:
+        session: 数据库异步会话。
+        _: 未使用的框架注入参数。
+
+    Returns:
+        返回类型为 list[AudienceRead] 的执行结果。
+    """
     audiences = await list_audiences(session)
 
     return [
@@ -56,6 +83,15 @@ async def creative_list(
     session: SessionDep,
     _: CurrentUser,
 ) -> list[CreativeRead]:
+    """查询已审核素材。
+
+    Args:
+        session: 数据库异步会话。
+        _: 未使用的框架注入参数。
+
+    Returns:
+        返回类型为 list[CreativeRead] 的执行结果。
+    """
     creatives = await list_creatives(session)
 
     return [

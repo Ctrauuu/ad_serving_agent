@@ -10,10 +10,20 @@ async_session = async_sessionmaker(engine, expire_on_commit=False)
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    """提供数据库异步会话。
+
+    Returns:
+        返回类型为 AsyncGenerator[AsyncSession, None] 的执行结果。
+    """
     async with async_session() as session:
         yield session
 
 
 async def check_database() -> None:
+    """检查数据库连接。
+
+    Returns:
+        无返回值。
+    """
     async with engine.connect() as connection:
         await connection.execute(text("SELECT 1"))

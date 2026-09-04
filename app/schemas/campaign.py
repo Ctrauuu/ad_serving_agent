@@ -51,6 +51,11 @@ class CampaignCreate(BaseModel):
 
     @model_validator(mode="after")
     def validate_dates(self) -> Self:
+        """校验活动日期范围。
+
+        Returns:
+            校验后的当前模型。
+        """
         if self.end_date < self.start_date:
             raise ValueError("结束日期不能早于开始日期")
         return self
@@ -71,6 +76,11 @@ class CampaignUpdate(BaseModel):
 
     @model_validator(mode="after")
     def validate_dates(self) -> Self:
+        """校验活动日期范围。
+
+        Returns:
+            校验后的当前模型。
+        """
         if (
             self.start_date is not None
             and self.end_date is not None

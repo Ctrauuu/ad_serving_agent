@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     milvus_token: str | None = "root:Milvus"
     milvus_collection: str = "ad_knowledge"
     milvus_campaign_strategy_collection: str = "campaign_strategy"
+    milvus_anomaly_case_collection: str = "anomaly_case"
     milvus_vector_dim: int = 1024
     jwt_secret_key: SecretStr
     jwt_algorithm: str = "HS256"
@@ -29,4 +30,9 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
+    """读取并缓存应用配置。
+
+    Returns:
+        缓存后的应用配置。
+    """
     return Settings() # type: ignore

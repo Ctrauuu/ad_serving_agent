@@ -11,6 +11,11 @@ router = APIRouter(route_class=UnifiedResponseRoute)
 
 @router.get("/health")
 async def health() -> dict[str, object]:
+    """检查应用依赖健康状态。
+
+    Returns:
+        返回类型为 dict[str, object] 的执行结果。
+    """
     try:
         await check_database()
         await redis_client.ping() # type: ignore

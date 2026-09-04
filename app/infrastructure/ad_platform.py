@@ -13,6 +13,15 @@ async def call_ad_platform_tool(
     tool_name: str,
     arguments: dict[str, Any],
 ) -> dict[str, Any]:
+    """调用模拟广告平台 MCP 工具。
+
+    Args:
+        tool_name: MCP 工具名称。
+        arguments: MCP 工具参数。
+
+    Returns:
+        返回类型为 dict[str, Any] 的执行结果。
+    """
     settings = get_settings()
 
     try:

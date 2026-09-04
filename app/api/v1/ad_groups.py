@@ -38,6 +38,16 @@ async def ad_group_list(
     session: SessionDep,
     current_user: CurrentUser,
 ) -> list[AdGroupTaskRead]:
+    """查询活动广告组列表。
+
+    Args:
+        campaign_id: 活动编号。
+        session: 数据库异步会话。
+        current_user: 当前登录用户。
+
+    Returns:
+        返回类型为 list[AdGroupTaskRead] 的执行结果。
+    """
     campaign = await get_campaign(
         session,
         campaign_id,

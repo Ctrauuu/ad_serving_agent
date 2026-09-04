@@ -39,6 +39,15 @@ def _window_start(
     data_time: datetime,
     window: str,
 ) -> datetime:
+    """计算指标窗口起点。
+
+    Args:
+        data_time: 指标采集时间。
+        window: 聚合时间窗口。
+
+    Returns:
+        返回类型为 datetime 的执行结果。
+    """
     if window == "minute":
         return data_time.replace(
             second=0,
@@ -61,6 +70,14 @@ def _window_start(
 
 
 def _parse_data_time(value: object) -> datetime:
+    """解析并标准化平台时间。
+
+    Args:
+        value: 待处理的输入值。
+
+    Returns:
+        返回类型为 datetime 的执行结果。
+    """
     parsed = datetime.fromisoformat(str(value))
 
     if parsed.tzinfo is None:
@@ -73,6 +90,14 @@ def _parse_data_time(value: object) -> datetime:
 
 
 def _money(value: object) -> Decimal:
+    """量化两位小数金额。
+
+    Args:
+        value: 待处理的输入值。
+
+    Returns:
+        返回类型为 Decimal 的执行结果。
+    """
     return Decimal(str(value)).quantize(
         _CENT,
         rounding=ROUND_HALF_UP,
@@ -84,6 +109,16 @@ def _ratio(
     denominator: Decimal,
     precision: str,
 ) -> Decimal | None:
+    """安全计算量化比率。
+
+    Args:
+        numerator: 函数输入参数。
+        denominator: 函数输入参数。
+        precision: 函数输入参数。
+
+    Returns:
+        返回类型为 Decimal | None 的执行结果。
+    """
     if denominator == 0:
         return None
 
@@ -96,6 +131,14 @@ def _ratio(
 def _metric_payload(
     row: AdMetricRealtime,
 ) -> dict[str, Any]:
+    """转换 Redis 指标数据。
+
+    Args:
+        row: 指标记录。
+
+    Returns:
+        返回类型为 dict[str, Any] 的执行结果。
+    """
     now = datetime.now(timezone.utc).replace(
         tzinfo=None
     )
@@ -146,6 +189,17 @@ async def _save_metric(
     key: tuple[str, int, str, datetime],
     totals: dict[str, Any],
 ) -> AdMetricRealtime:
+    """累计保存聚合指标。
+
+    Args:
+        session: 数据库异步会话。
+        campaign_id: 活动编号。
+        key: 聚合唯一键。
+        totals: 窗口累计指标。
+
+    Returns:
+        返回类型为 AdMetricRealtime 的执行结果。
+    """
     dimension, dim_id, window, window_start = key
 
     row = await session.scalar(
@@ -230,6 +284,19 @@ async def _save_budget(
     budget_total: Decimal,
     cost: Decimal,
 ) -> BudgetConsumption:
+    """累计更新预算状态。
+
+    Args:
+        session: 数据库异步会话。
+        campaign_id: 活动编号。
+        target_type: 预算目标类型。
+        target_id: 预算目标编号。
+        budget_total: 预算总额。
+        cost: 新增消耗。
+
+    Returns:
+        返回类型为 BudgetConsumption 的执行结果。
+    """
     row = await session.scalar(
         select(BudgetConsumption).where(
             BudgetConsumption.target_type
@@ -273,6 +340,15 @@ async def sync_campaign_metrics(
     session: AsyncSession,
     campaign: Campaign,
 ) -> MetricSyncResult:
+    """拉取、聚合并双写活动指标。
+
+    Args:
+        session: 数据库异步会话。
+        campaign: 活动 ORM 对象。
+
+    Returns:
+        返回类型为 MetricSyncResult 的执行结果。
+    """
     lock = redis_client.lock(
         f"metric:sync:lock:{campaign.id}",
         timeout=240,
@@ -623,6 +699,15 @@ async def get_realtime_metrics(
     dimension: MetricDimension,
 ) -> RealtimeMetricResult:
     
+    """读取 Redis 最新指标。
+
+    Args:
+        campaign_id: 活动编号。
+        dimension: 指标维度。
+
+    Returns:
+        返回类型为 RealtimeMetricResult 的执行结果。
+    """
     values = await cast(
     Awaitable[list[str]],
     redis_client.hvals(
@@ -676,6 +761,17 @@ async def get_metric_trend(
     dimension: MetricDimension,
     window: MetricTrendWindow,
 ) -> MetricTrendResult:
+    """查询 MySQL 指标趋势。
+
+    Args:
+        session: 数据库异步会话。
+        campaign_id: 活动编号。
+        dimension: 指标维度。
+        window: 聚合时间窗口。
+
+    Returns:
+        返回类型为 MetricTrendResult 的执行结果。
+    """
     cutoff = (
         datetime.now(timezone.utc)
         .replace(tzinfo=None)
@@ -763,6 +859,14 @@ async def get_metric_trend(
 async def get_campaign_budget(
     campaign_id: int,
 ) -> CampaignBudgetResult:
+    """读取 Redis 预算状态。
+
+    Args:
+        campaign_id: 活动编号。
+
+    Returns:
+        返回类型为 CampaignBudgetResult 的执行结果。
+    """
     values = await cast(
         Awaitable[list[str]],
         redis_client.hvals(

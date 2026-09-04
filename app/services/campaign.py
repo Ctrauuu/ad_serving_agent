@@ -8,6 +8,16 @@ async def create_campaign(
     form:CampaignCreate,
     owner_id:int
 ) -> Campaign | None:
+    """创建草稿活动。
+
+    Args:
+        session: 数据库异步会话。
+        form: 已校验的请求数据。
+        owner_id: 活动所属用户编号。
+
+    Returns:
+        返回类型为 Campaign | None 的执行结果。
+    """
     product_id = await session.scalar(
         select(Product.id).where(
             Product.id == form.product_id,
@@ -41,6 +51,16 @@ async def get_campaign(
     campaign_id:int,
     current_user:User
 ) -> Campaign | None:
+    """查询用户可访问的活动。
+
+    Args:
+        session: 数据库异步会话。
+        campaign_id: 活动编号。
+        current_user: 当前登录用户。
+
+    Returns:
+        返回类型为 Campaign | None 的执行结果。
+    """
     filters=[Campaign.id == campaign_id]
     # ponytail: owner_id 是当前唯一参与关系；需要运营人员范围时增加 campaign_member 表。
     if current_user.role != "投放负责人":
@@ -56,6 +76,19 @@ async def list_campaigns(
     status:CampaignStatus | None = None,
     keyword: str | None = None,
 ) -> tuple[list[Campaign], int]:
+    """分页筛选活动。
+
+    Args:
+        session: 数据库异步会话。
+        current_user: 当前登录用户。
+        page: 分页页码。
+        page_size: 每页数量。
+        status: 状态筛选条件。
+        keyword: 名称搜索词。
+
+    Returns:
+        返回类型为 tuple[list[Campaign], int] 的执行结果。
+    """
     filters=[]
 
     if current_user.role != "投放负责人":
@@ -87,6 +120,17 @@ async def update_campaign(
     form: CampaignUpdate,
     current_user: User,
 ) -> Campaign | None:
+    """更新活动字段和状态。
+
+    Args:
+        session: 数据库异步会话。
+        campaign_id: 活动编号。
+        form: 已校验的请求数据。
+        current_user: 当前登录用户。
+
+    Returns:
+        返回类型为 Campaign | None 的执行结果。
+    """
     campaign = await get_campaign(session, campaign_id, current_user)
     if campaign is None:
         return None

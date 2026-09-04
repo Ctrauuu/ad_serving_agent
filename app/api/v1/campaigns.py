@@ -29,6 +29,9 @@ from app.schemas import (
     StrategyConfirmResult,
     AdTaskCreateRequest,
     AdTaskCreateResult,
+    AnomalyRecordRead,
+    AnomalyScanResult,
+    AnomalyStatus,
     CampaignBudgetResult,
     MetricSyncResult,
     MetricDimension,
@@ -58,6 +61,10 @@ from app.services.metric import (
     get_realtime_metrics,
     sync_campaign_metrics,
 )
+from app.services.anomaly import (
+    list_campaign_anomalies,
+    scan_campaign_anomalies,
+)
 
 
 CampaignCreator = Annotated[User,Depends(require_role("投放人员"))]
@@ -85,6 +92,19 @@ async def campaign_list(
     ] = None,
     keyword: Annotated[str | None, Query(max_length=128)] = None,
 ) -> CampaignList:
+    """分页查询活动。
+
+    Args:
+        session: 数据库异步会话。
+        current_user: 当前登录用户。
+        page: 分页页码。
+        page_size: 每页数量。
+        status_filter: 活动状态筛选条件。
+        keyword: 名称搜索词。
+
+    Returns:
+        返回类型为 CampaignList 的执行结果。
+    """
     campaigns, total = await list_campaigns(
         session,
         current_user=current_user,
@@ -105,6 +125,16 @@ async def campaign_create(
     session: SessionDep,
     current_user: CampaignCreator,
 ) -> CampaignRead:
+    """创建活动。
+
+    Args:
+        form: 已校验的请求数据。
+        session: 数据库异步会话。
+        current_user: 当前登录用户。
+
+    Returns:
+        返回类型为 CampaignRead 的执行结果。
+    """
     campaign = await create_campaign(session,form,current_user.id)
 
     if not campaign:
@@ -121,6 +151,16 @@ async def campaign_detail(
     session: SessionDep,
     current_user: CurrentUser
 ) -> CampaignRead:
+    """查询活动详情。
+
+    Args:
+        campaign_id: 活动编号。
+        session: 数据库异步会话。
+        current_user: 当前登录用户。
+
+    Returns:
+        返回类型为 CampaignRead 的执行结果。
+    """
     campaign = await get_campaign(session, campaign_id, current_user)
 
     if not campaign:
@@ -138,6 +178,17 @@ async def campaign_update(
     session: SessionDep,
     current_user: CurrentUser
 ) -> CampaignRead:
+    """更新活动配置。
+
+    Args:
+        campaign_id: 活动编号。
+        form: 已校验的请求数据。
+        session: 数据库异步会话。
+        current_user: 当前登录用户。
+
+    Returns:
+        返回类型为 CampaignRead 的执行结果。
+    """
     if (
         "structured_goal" in form.model_fields_set
         and current_user.role != "投放人员"
@@ -174,6 +225,16 @@ async def campaign_parse_goal(
     session: SessionDep,
     current_user:CurrentUser,
 ) -> GoalParseResult | JSONResponse:
+    """解析自然语言投放目标。
+
+    Args:
+        campaign_id: 活动编号。
+        session: 数据库异步会话。
+        current_user: 当前登录用户。
+
+    Returns:
+        返回类型为 GoalParseResult | JSONResponse 的执行结果。
+    """
     campaign = await get_campaign(session, campaign_id, current_user)
     if campaign is None:
         raise HTTPException(
@@ -221,6 +282,16 @@ async def campaign_generate_strategy(
     session: SessionDep,
     current_user: CurrentUser,
 ) -> StrategyDetail:
+    """生成投放策略。
+
+    Args:
+        campaign_id: 活动编号。
+        session: 数据库异步会话。
+        current_user: 当前登录用户。
+
+    Returns:
+        返回类型为 StrategyDetail 的执行结果。
+    """
     campaign = await get_campaign(
         session,
         campaign_id,
@@ -255,6 +326,16 @@ async def campaign_strategy_detail(
     session: SessionDep,
     current_user: CurrentUser,
 ) -> StrategyDetail:
+    """查询活动策略。
+
+    Args:
+        campaign_id: 活动编号。
+        session: 数据库异步会话。
+        current_user: 当前登录用户。
+
+    Returns:
+        返回类型为 StrategyDetail 的执行结果。
+    """
     campaign = await get_campaign(
         session,
         campaign_id,
@@ -289,6 +370,16 @@ async def campaign_confirm_strategy(
     session: SessionDep,
     current_user: StrategyConfirmer,
 ) -> StrategyConfirmResult:
+    """确认活动策略。
+
+    Args:
+        campaign_id: 活动编号。
+        session: 数据库异步会话。
+        current_user: 当前登录用户。
+
+    Returns:
+        返回类型为 StrategyConfirmResult 的执行结果。
+    """
     campaign = await get_campaign(
         session,
         campaign_id,
@@ -325,6 +416,17 @@ async def campaign_create_ad_tasks(
     session: SessionDep,
     current_user: CampaignCreator,
 ) -> AdTaskCreateResult:
+    """按策略创建广告任务。
+
+    Args:
+        campaign_id: 活动编号。
+        form: 已校验的请求数据。
+        session: 数据库异步会话。
+        current_user: 当前登录用户。
+
+    Returns:
+        返回类型为 AdTaskCreateResult 的执行结果。
+    """
     campaign = await get_campaign(
         session,
         campaign_id,
@@ -361,6 +463,16 @@ async def campaign_ad_task_list(
     session: SessionDep,
     current_user: CurrentUser,
 ) -> AdTaskCreateResult:
+    """查询活动广告任务。
+
+    Args:
+        campaign_id: 活动编号。
+        session: 数据库异步会话。
+        current_user: 当前登录用户。
+
+    Returns:
+        返回类型为 AdTaskCreateResult 的执行结果。
+    """
     campaign = await get_campaign(
         session,
         campaign_id,
@@ -387,6 +499,16 @@ async def campaign_sync_metrics(
     session: SessionDep,
     current_user: CurrentUser,
 ) -> MetricSyncResult:
+    """手动同步活动指标。
+
+    Args:
+        campaign_id: 活动编号。
+        session: 数据库异步会话。
+        current_user: 当前登录用户。
+
+    Returns:
+        返回类型为 MetricSyncResult 的执行结果。
+    """
     campaign = await get_campaign(
         session,
         campaign_id,
@@ -425,6 +547,17 @@ async def campaign_realtime_metrics(
         Query(),
     ] = "campaign",
 ) -> RealtimeMetricResult:
+    """查询活动实时指标。
+
+    Args:
+        campaign_id: 活动编号。
+        session: 数据库异步会话。
+        current_user: 当前登录用户。
+        dimension: 指标维度。
+
+    Returns:
+        返回类型为 RealtimeMetricResult 的执行结果。
+    """
     campaign = await get_campaign(
         session,
         campaign_id,
@@ -459,6 +592,18 @@ async def campaign_metric_trend(
         Query(),
     ] = "hour",
 ) -> MetricTrendResult:
+    """查询活动指标趋势。
+
+    Args:
+        campaign_id: 活动编号。
+        session: 数据库异步会话。
+        current_user: 当前登录用户。
+        dimension: 指标维度。
+        window: 聚合时间窗口。
+
+    Returns:
+        返回类型为 MetricTrendResult 的执行结果。
+    """
     campaign = await get_campaign(
         session,
         campaign_id,
@@ -487,6 +632,16 @@ async def campaign_budget(
     session: SessionDep,
     current_user: CurrentUser,
 ) -> CampaignBudgetResult:
+    """查询活动预算消耗。
+
+    Args:
+        campaign_id: 活动编号。
+        session: 数据库异步会话。
+        current_user: 当前登录用户。
+
+    Returns:
+        返回类型为 CampaignBudgetResult 的执行结果。
+    """
     campaign = await get_campaign(
         session,
         campaign_id,
@@ -502,3 +657,95 @@ async def campaign_budget(
     return await get_campaign_budget(
         campaign.id
     )
+
+@router.post(
+    "/{campaign_id}/anomalies/scan",
+    response_model=None,
+)
+async def campaign_anomaly_scan(
+    campaign_id: CampaignId,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> AnomalyScanResult:
+    """手动扫描活动指标并生成异常记录。
+
+    Args:
+        campaign_id: 待扫描的活动编号。
+        session: 数据库异步会话。
+        current_user: 当前登录用户。
+
+    Returns:
+        本次异常扫描的状态和统计结果。
+    """
+    campaign = await get_campaign(
+        session,
+        campaign_id,
+        current_user,
+    )
+
+    if campaign is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="活动不存在",
+        )
+
+    try:
+        return await scan_campaign_anomalies(
+            session,
+            campaign,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=(
+                status.HTTP_422_UNPROCESSABLE_CONTENT
+            ),
+            detail=str(exc),
+        ) from exc
+
+
+@router.get(
+    "/{campaign_id}/anomalies",
+    response_model=None,
+)
+async def campaign_anomaly_list(
+    campaign_id: CampaignId,
+    session: SessionDep,
+    current_user: CurrentUser,
+    status_filter: Annotated[
+        AnomalyStatus | None,
+        Query(alias="status"),
+    ] = None,
+) -> list[AnomalyRecordRead]:
+    """查询当前用户可访问的活动异常列表。
+
+    Args:
+        campaign_id: 活动编号。
+        session: 数据库异步会话。
+        current_user: 当前登录用户。
+        status_filter: 可选的异常状态筛选条件。
+
+    Returns:
+        满足筛选条件的异常记录列表。
+    """
+    campaign = await get_campaign(
+        session,
+        campaign_id,
+        current_user,
+    )
+
+    if campaign is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="活动不存在",
+        )
+
+    records = await list_campaign_anomalies(
+        session,
+        campaign.id,
+        status_filter,
+    )
+
+    return [
+        AnomalyRecordRead.model_validate(record)
+        for record in records
+    ]

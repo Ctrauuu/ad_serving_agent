@@ -183,6 +183,53 @@ def test_campaign_budget_returns_redis_state(monkeypatch) -> None:
         "items": [],
     }
 
+
+def test_manual_anomaly_scan_returns_result(monkeypatch) -> None:
+    from app.schemas import AnomalyScanResult
+
+    async def fake_get_campaign(*_):
+        return make_campaign()
+
+    async def fake_scan(session, campaign):
+        return AnomalyScanResult(
+            campaign_id=campaign.id,
+            status="completed",
+            stage="稳态期",
+            scanned_groups=2,
+            evaluated_rules=8,
+            created_count=1,
+            deduplicated_count=0,
+            skipped_stale_groups=0,
+            skipped_no_data_groups=0,
+            created_ids=[9],
+            errors=[],
+        )
+
+    monkeypatch.setattr(
+        "app.api.v1.campaigns.get_campaign",
+        fake_get_campaign,
+    )
+    monkeypatch.setattr(
+        "app.api.v1.campaigns.scan_campaign_anomalies",
+        fake_scan,
+    )
+
+    response = TestClient(app).post(
+        "/api/v1/campaigns/8/anomalies/scan"
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"]["created_ids"] == [9]
+
+
+def test_anomaly_list_rejects_unknown_status() -> None:
+    response = TestClient(app).get(
+        "/api/v1/campaigns/8/anomalies",
+        params={"status": "未知状态"},
+    )
+
+    assert response.status_code == 422
+
 def test_parse_goal_returns_missing_fields(monkeypatch) -> None:
     async def fake_get_campaign(session, campaign_id, current_user):
         return make_campaign()

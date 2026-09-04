@@ -27,6 +27,11 @@ _SYSTEM_PROMPT = f"""
 
 @lru_cache
 def get_goal_llm() -> ChatOpenAI:
+    """创建目标解析模型客户端。
+
+    Returns:
+        配置完成的模型客户端。
+    """
     settings = get_settings()
     return ChatOpenAI(
         model=settings.dashscope_model,
@@ -44,6 +49,14 @@ def get_goal_llm() -> ChatOpenAI:
 async def parse_goal_text(
     goal_text: str,
 ) -> GoalParseResult:
+    """解析并校验投放目标。
+
+    Args:
+        goal_text: 自然语言目标。
+
+    Returns:
+        返回类型为 GoalParseResult 的执行结果。
+    """
     response = await get_goal_llm().ainvoke(
         [
             SystemMessage(content=_SYSTEM_PROMPT),

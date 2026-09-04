@@ -10,6 +10,11 @@ password_hasher = PasswordHash.recommended()
 
 
 async def main() -> None:
+    """执行命令行脚本入口。
+
+    Returns:
+        无返回值。
+    """
     username = input("用户名: ").strip()
     password = getpass("新密码: ")
     confirmation = getpass("确认密码: ")

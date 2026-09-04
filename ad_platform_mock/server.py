@@ -21,6 +21,14 @@ _groups: dict[str, dict[str, Any]] = {}
 
 
 def _new_id(prefix: str) -> str:
+    """生成模拟平台业务标识。
+
+    Args:
+        prefix: 平台标识前缀。
+
+    Returns:
+        返回类型为 str 的执行结果。
+    """
     return f"mock_{prefix}_{uuid4().hex[:12]}"
 
 
@@ -28,6 +36,15 @@ def _require_positive(
     field: str,
     value: float,
 ) -> None:
+    """校验数值必须大于零。
+
+    Args:
+        field: 函数输入参数。
+        value: 待处理的输入值。
+
+    Returns:
+        无返回值。
+    """
     if value <= 0:
         raise ValueError(f"{field} 必须大于 0")
 
@@ -35,6 +52,14 @@ def _require_positive(
 def _find_entity(
     platform_id: str,
 ) -> dict[str, Any]:
+    """按平台标识查找业务对象。
+
+    Args:
+        platform_id: 平台任务标识。
+
+    Returns:
+        返回类型为 dict[str, Any] 的执行结果。
+    """
     entity = (
         _plans.get(platform_id)
         or _groups.get(platform_id)
@@ -52,7 +77,16 @@ def create_ad_plan(
     budget_total: float,
     budget_daily: float,
 ) -> dict[str, Any]:
-    """创建模拟广告计划。"""
+    """创建模拟广告计划。
+
+    Args:
+        name: 广告计划名称。
+        budget_total: 广告计划总预算。
+        budget_daily: 广告计划日预算。
+
+    Returns:
+        包含平台计划 ID 和审核状态的结果。
+    """
     if not name.strip():
         raise ValueError("广告计划名称不能为空")
 
@@ -84,7 +118,19 @@ def create_ad_group(
     budget_daily: float,
     bid: float,
 ) -> dict[str, Any]:
-    """在指定广告计划下创建模拟广告组。"""
+    """在指定广告计划下创建模拟广告组。
+
+    Args:
+        ad_platform_task_id: 所属平台计划 ID。
+        name: 广告组名称。
+        audience_id: 人群编号。
+        creative_id: 素材编号。
+        budget_daily: 广告组日预算。
+        bid: 广告组出价。
+
+    Returns:
+        包含平台广告组 ID 和审核状态的结果。
+    """
     if ad_platform_task_id not in _plans:
         raise ValueError("广告计划不存在")
 
@@ -124,7 +170,14 @@ def create_ad_group(
 def get_ad_status(
     platform_id: str,
 ) -> dict[str, Any]:
-    """查询平台任务状态，首次查询后模拟审核通过。"""
+    """查询平台任务状态，首次查询后模拟审核通过。
+
+    Args:
+        platform_id: 平台计划或广告组 ID。
+
+    Returns:
+        平台任务类型及最新状态。
+    """
     entity = _find_entity(platform_id)
 
     if entity["status"] == "审核中":
@@ -141,7 +194,14 @@ def get_ad_status(
 def pause_ad_group(
     ad_platform_group_id: str,
 ) -> dict[str, Any]:
-    """暂停已上线广告组。"""
+    """暂停已上线广告组。
+
+    Args:
+        ad_platform_group_id: 平台广告组 ID。
+
+    Returns:
+        广告组 ID 和暂停后的状态。
+    """
     group = _groups.get(ad_platform_group_id)
 
     if group is None:
@@ -162,7 +222,14 @@ def pause_ad_group(
 def resume_ad_group(
     ad_platform_group_id: str,
 ) -> dict[str, Any]:
-    """恢复已暂停广告组。"""
+    """恢复已暂停广告组。
+
+    Args:
+        ad_platform_group_id: 平台广告组 ID。
+
+    Returns:
+        广告组 ID 和恢复后的状态。
+    """
     group = _groups.get(ad_platform_group_id)
 
     if group is None:
@@ -184,7 +251,15 @@ def adjust_budget(
     platform_id: str,
     budget_daily: float,
 ) -> dict[str, Any]:
-    """调整广告计划或广告组日预算。"""
+    """调整广告计划或广告组日预算。
+
+    Args:
+        platform_id: 平台计划或广告组 ID。
+        budget_daily: 调整后的日预算。
+
+    Returns:
+        平台任务 ID、日预算和当前状态。
+    """
     _require_positive("budget_daily", budget_daily)
 
     entity = _find_entity(platform_id)
@@ -202,7 +277,15 @@ def adjust_bid(
     ad_platform_group_id: str,
     bid: float,
 ) -> dict[str, Any]:
-    """调整广告组出价。"""
+    """调整广告组出价。
+
+    Args:
+        ad_platform_group_id: 平台广告组 ID。
+        bid: 调整后的广告出价。
+
+    Returns:
+        广告组 ID、出价和当前状态。
+    """
     _require_positive("bid", bid)
 
     group = _groups.get(ad_platform_group_id)
@@ -223,7 +306,14 @@ def adjust_bid(
 def get_ad_metrics(
     ad_platform_group_id: str,
 ) -> dict[str, Any]:
-    """获取一个采集周期内的模拟广告指标。"""
+    """获取一个采集周期内的模拟广告指标。
+
+    Args:
+        ad_platform_group_id: 平台广告组 ID。
+
+    Returns:
+        曝光、点击、消耗、转化、收入及采集时间。
+    """
     group = _groups.get(ad_platform_group_id)
 
     if group is None:

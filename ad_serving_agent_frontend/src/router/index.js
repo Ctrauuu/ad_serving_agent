@@ -5,6 +5,7 @@ import CampaignCreate from '../views/CampaignCreate.vue'
 import StrategyConfirm from '../views/StrategyConfirm.vue'
 import AdTasks from '../views/AdTasks.vue'
 import AdTaskDetail from '../views/AdTaskDetail.vue'
+import MonitorDashboard from '../views/MonitorDashboard.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -16,6 +17,7 @@ const router = createRouter({
     { path: '/campaigns/:id/strategy', component: StrategyConfirm, meta: { requiresAuth: true } },
     { path: '/campaigns/:id/ad-tasks', component: AdTasks, meta: { requiresAuth: true } },
     { path: '/campaigns/:id/ad-tasks/:taskId', component: AdTaskDetail, meta: { requiresAuth: true } },
+    { path: '/campaigns/:id/monitor', component: MonitorDashboard, meta: { requiresAuth: true } },
   ],
 })
 

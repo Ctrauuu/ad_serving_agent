@@ -12,6 +12,16 @@ async def authenticate_user(
         username: str,
         password: str,
 ) -> User | None:
+    """认证用户名和密码。
+
+    Args:
+        session: 数据库异步会话。
+        username: 函数输入参数。
+        password: 明文密码。
+
+    Returns:
+        返回类型为 User | None 的执行结果。
+    """
     user = await session.scalar(
         select(User).where(User.username == username)
     )
@@ -35,4 +45,3 @@ async def authenticate_user(
         return None
 
     return user
-

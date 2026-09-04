@@ -17,6 +17,15 @@ async def login(
     form: LoginRequest,
     session: SessionDep,
 ) -> LoginResult:
+    """校验登录信息并签发令牌。
+
+    Args:
+        form: 已校验的请求数据。
+        session: 数据库异步会话。
+
+    Returns:
+        返回类型为 LoginResult 的执行结果。
+    """
     user = await authenticate_user(
         session,
         form.username, 
@@ -39,4 +48,12 @@ async def login(
 async def me(
     current_user: CurrentUser
 ) -> UserInfo:
+    """查询当前登录用户。
+
+    Args:
+        current_user: 当前登录用户。
+
+    Returns:
+        返回类型为 UserInfo 的执行结果。
+    """
     return UserInfo.model_validate(current_user)

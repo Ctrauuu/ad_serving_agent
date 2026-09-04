@@ -20,6 +20,14 @@ from app.tasks import (
 async def lifespan(
     _: FastAPI,
 ) -> AsyncIterator[None]:
+    """管理应用依赖生命周期。
+
+    Args:
+        _: 未使用的框架注入参数。
+
+    Returns:
+        返回类型为 AsyncIterator[None] 的执行结果。
+    """
     try:
         await check_database()
         await redis_client.ping()  # type: ignore

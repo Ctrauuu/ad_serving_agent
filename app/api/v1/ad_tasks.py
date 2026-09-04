@@ -37,6 +37,16 @@ async def ad_task_status(
     session: SessionDep,
     current_user: CurrentUser,
 ) -> AdTaskStatusResult:
+    """同步并返回广告任务状态。
+
+    Args:
+        task_id: 广告任务编号。
+        session: 数据库异步会话。
+        current_user: 当前登录用户。
+
+    Returns:
+        返回类型为 AdTaskStatusResult 的执行结果。
+    """
     plan = await session.get(
         AdPlan,
         task_id,

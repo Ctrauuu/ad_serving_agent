@@ -34,6 +34,15 @@ async def list_ad_tasks(
     session: AsyncSession,
     campaign: Campaign,
 ) -> AdTaskCreateResult:
+    """查询活动广告任务。
+
+    Args:
+        session: 数据库异步会话。
+        campaign: 活动 ORM 对象。
+
+    Returns:
+        返回类型为 AdTaskCreateResult 的执行结果。
+    """
     plans = list(
         (
             await session.scalars(
@@ -163,6 +172,18 @@ async def _create_local_tasks(
     strategy_plan: StrategyPlan,
     form: AdTaskCreateRequest,
 ) -> list[AdPlan]:
+    """拆解并保存本地广告任务。
+
+    Args:
+        session: 数据库异步会话。
+        campaign: 活动 ORM 对象。
+        strategy: 策略对象。
+        strategy_plan: 结构化策略。
+        form: 已校验的请求数据。
+
+    Returns:
+        返回类型为 list[AdPlan] 的执行结果。
+    """
     day_count = (
         campaign.end_date - campaign.start_date
     ).days + 1
@@ -302,6 +323,16 @@ async def create_ad_tasks(
     #     └── _load_result()
     #            ↓
     #         把最终任务树查出来返回
+    """创建或重试平台广告任务。
+
+    Args:
+        session: 数据库异步会话。
+        campaign: 活动 ORM 对象。
+        form: 已校验的请求数据。
+
+    Returns:
+        返回类型为 AdTaskCreateResult 的执行结果。
+    """
     if campaign.status not in {
         "策略已确认",
         "任务创建中",
@@ -628,6 +659,16 @@ async def sync_ad_task_status(
     # Campaign = 投放中
     #    ↓
     # 返回这个 Plan + Groups 的最新状态
+    """同步广告任务平台状态。
+
+    Args:
+        session: 数据库异步会话。
+        campaign: 活动 ORM 对象。
+        plan: 广告计划对象。
+
+    Returns:
+        返回类型为 AdTaskStatusResult 的执行结果。
+    """
     groups = list(
         (
             await session.scalars(
@@ -745,6 +786,15 @@ async def list_ad_groups(
     session: AsyncSession,
     campaign: Campaign,
 ) -> list[AdGroupTaskRead]:
+    """查询活动广告组。
+
+    Args:
+        session: 数据库异步会话。
+        campaign: 活动 ORM 对象。
+
+    Returns:
+        返回类型为 list[AdGroupTaskRead] 的执行结果。
+    """
     task_result = await list_ad_tasks(
         session,
         campaign,

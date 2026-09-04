@@ -39,6 +39,11 @@ class StrategyPlan(BaseModel):
 
     @model_validator(mode="after")
     def validate_budget_channels(self) -> Self:
+        """校验策略预算渠道。
+
+        Returns:
+            校验后的当前模型。
+        """
         channel_names = {
             channel.channel_name
             for channel in self.channel_mix
