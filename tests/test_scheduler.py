@@ -7,6 +7,7 @@ import pytest
 import app.tasks.scheduler as scheduler_module
 from app.models import Campaign
 from app.tasks.scheduler import (
+    scan_expired_approvals,
     scheduler,
     start_metric_scheduler,
     stop_metric_scheduler,
@@ -15,18 +16,28 @@ from app.tasks.scheduler import (
 
 
 @pytest.mark.asyncio
-async def test_metric_scheduler_registers_one_five_minute_job() -> None:
-    """验证调度器仅注册一个五分钟周期任务。"""
+async def test_scheduler_registers_metric_and_approval_jobs() -> None:
+    """验证调度器幂等注册指标和审批超时任务。"""
     try:
         start_metric_scheduler()
         start_metric_scheduler()
 
-        jobs = scheduler.get_jobs()
-        assert len(jobs) == 1
-        assert jobs[0].id == "sync_active_campaign_metrics"
-        assert jobs[0].trigger.interval.total_seconds() == 300
-        assert jobs[0].max_instances == 1
-        assert jobs[0].coalesce is True
+        jobs = {
+            job.id: job
+            for job in scheduler.get_jobs()
+        }
+        assert set(jobs) == {
+            "sync_active_campaign_metrics",
+            "scan_expired_approvals",
+        }
+        metric_job = jobs["sync_active_campaign_metrics"]
+        approval_job = jobs["scan_expired_approvals"]
+        assert metric_job.trigger.interval.total_seconds() == 300
+        assert approval_job.trigger.interval.total_seconds() == 3600
+        assert metric_job.max_instances == 1
+        assert approval_job.max_instances == 1
+        assert metric_job.coalesce is True
+        assert approval_job.coalesce is True
     finally:
         stop_metric_scheduler()
         await asyncio.sleep(0)
@@ -81,3 +92,61 @@ async def test_scheduler_syncs_metrics_before_scanning_anomalies(
     await sync_active_campaign_metrics()
 
     assert calls == ["sync", "scan"]
+
+
+@pytest.mark.asyncio
+async def test_scheduler_scans_expired_approvals(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """验证审批超时任务创建会话并返回超时编号。"""
+    session = AsyncMock()
+
+    @asynccontextmanager
+    async def fake_async_session():
+        """提供审批超时扫描使用的测试数据库会话。"""
+        yield session
+
+    expire_service = AsyncMock(return_value=[10, 11])
+    monkeypatch.setattr(
+        scheduler_module,
+        "async_session",
+        fake_async_session,
+    )
+    monkeypatch.setattr(
+        scheduler_module,
+        "expire_pending_approvals",
+        expire_service,
+    )
+
+    expired_ids = await scan_expired_approvals()
+
+    assert expired_ids == [10, 11]
+    expire_service.assert_awaited_once_with(session)
+
+
+@pytest.mark.asyncio
+async def test_scheduler_isolates_approval_scan_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """验证审批扫描失败不会中断后续调度。"""
+    session = AsyncMock()
+
+    @asynccontextmanager
+    async def fake_async_session():
+        """提供审批超时扫描使用的测试数据库会话。"""
+        yield session
+
+    monkeypatch.setattr(
+        scheduler_module,
+        "async_session",
+        fake_async_session,
+    )
+    monkeypatch.setattr(
+        scheduler_module,
+        "expire_pending_approvals",
+        AsyncMock(side_effect=RuntimeError("数据库不可用")),
+    )
+
+    expired_ids = await scan_expired_approvals()
+
+    assert expired_ids == []

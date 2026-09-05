@@ -1,4 +1,12 @@
 from app.schemas.auth import LoginRequest, LoginResult, Role, UserInfo
+from app.schemas.approval import (
+    ApprovalDecisionRequest,
+    ApprovalDetail,
+    ApprovalRecordRead,
+    ApprovalRejectRequest,
+    ApprovalRoute,
+    ApprovalStatus,
+)
 from app.schemas.catalog import AudienceRead, ChannelRead, CreativeRead, ProductRead
 from app.schemas.campaign import (
     CampaignCreate,
@@ -21,6 +29,14 @@ from app.schemas.strategy import (
     StrategyRead,
     StrategyStatus,
     StrategyConfirmResult,
+)
+from app.schemas.suggestion import (
+    InterventionSuggestionRead,
+    SuggestionActionType,
+    SuggestionCandidate,
+    SuggestionGenerationOutput,
+    SuggestionGenerationResult,
+    SuggestionRiskLevel,
 )
 
 from app.schemas.ad_task import (
@@ -64,6 +80,12 @@ from app.schemas.metric import (
 )
 
 __all__ = [
+    "ApprovalDecisionRequest",
+    "ApprovalDetail",
+    "ApprovalRecordRead",
+    "ApprovalRejectRequest",
+    "ApprovalRoute",
+    "ApprovalStatus",
     "CampaignCreate",
     "CampaignList",
     "CampaignRead",
@@ -92,6 +114,12 @@ __all__ = [
     "StrategyRead",
     "StrategyStatus",
     "StrategyConfirmResult",
+    "InterventionSuggestionRead",
+    "SuggestionActionType",
+    "SuggestionCandidate",
+    "SuggestionGenerationOutput",
+    "SuggestionGenerationResult",
+    "SuggestionRiskLevel",
     "AdGroupTaskRead",
     "AdPlanTaskRead",
     "AdTaskCreateRequest",

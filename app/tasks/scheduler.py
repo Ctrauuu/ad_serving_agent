@@ -6,6 +6,7 @@ from sqlalchemy import select
 from app.infrastructure.database import async_session
 from app.models import AdGroup, Campaign
 from app.services.anomaly import scan_campaign_anomalies
+from app.services.approval import expire_pending_approvals
 from app.services.metric import sync_campaign_metrics
 
 
@@ -71,8 +72,35 @@ async def sync_active_campaign_metrics() -> None:
             )
 
 
+async def scan_expired_approvals() -> list[int]:
+    """扫描并标记超过 72 小时的待审批记录。
+
+    Returns:
+        本次被标记为已超时的审批记录编号列表。
+        扫描失败时记录错误并返回空列表。
+    """
+    try:
+        async with async_session() as session:
+            expired_ids = (
+                await expire_pending_approvals(
+                    session
+                )
+            )
+    except Exception:
+        logger.exception("审批超时扫描失败")
+        return []
+
+    if expired_ids:
+        logger.info(
+            "审批超时扫描完成：expired_ids=%s",
+            expired_ids,
+        )
+
+    return expired_ids
+
+
 def start_metric_scheduler() -> None:
-    """启动五分钟指标调度任务。
+    """启动指标同步与审批超时调度任务。
 
     Returns:
         无返回值。
@@ -89,6 +117,16 @@ def start_metric_scheduler() -> None:
         max_instances=1,
         coalesce=True,
         misfire_grace_time=60,
+    )
+    scheduler.add_job(
+        scan_expired_approvals,
+        trigger="interval",
+        hours=1,
+        id="scan_expired_approvals",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=300,
     )
     scheduler.start()
 

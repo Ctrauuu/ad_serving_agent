@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     milvus_collection: str = "ad_knowledge"
     milvus_campaign_strategy_collection: str = "campaign_strategy"
     milvus_anomaly_case_collection: str = "anomaly_case"
+    milvus_intervention_case_collection: str = (
+        "intervention_case"
+    )
     milvus_vector_dim: int = 1024
     jwt_secret_key: SecretStr
     jwt_algorithm: str = "HS256"

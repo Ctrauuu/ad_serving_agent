@@ -97,3 +97,43 @@ async def test_upsert_and_search_anomaly_case_vectors() -> None:
     assert search_args["limit"] == 3
     assert search_args["search_params"]["metric_type"] == "COSINE"
     assert matches == [{"case_id": 21, "score": 0.88}]
+
+
+@pytest.mark.asyncio
+async def test_upsert_and_search_intervention_case_vectors() -> None:
+    """验证干预案例向量写入参数与召回结果转换。"""
+    service = MilvusService()
+    client = MagicMock()
+    service._client = client
+    vector = [0.3] * 1024
+
+    await service.upsert_intervention_case_vector(
+        case_id=31,
+        intervention_vector=vector,
+    )
+
+    client.search.return_value = [
+        [
+            {
+                "case_id": 31,
+                "distance": 0.93,
+            }
+        ]
+    ]
+    matches = (
+        await service.search_similar_intervention_cases(
+            intervention_vector=vector,
+            limit=4,
+        )
+    )
+
+    assert client.upsert.call_args.kwargs["data"] == [
+        {
+            "case_id": 31,
+            "intervention_vector": vector,
+        }
+    ]
+    search_args = client.search.call_args.kwargs
+    assert search_args["limit"] == 4
+    assert search_args["search_params"]["metric_type"] == "COSINE"
+    assert matches == [{"case_id": 31, "score": 0.93}]

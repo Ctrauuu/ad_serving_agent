@@ -13,6 +13,9 @@ CauseEvidenceType = Literal[
     "landing_page",
     "sales_feedback",
     "case",
+    "ad_group",
+    "anomaly",
+    "metric_snapshot",
 ]
 
 
@@ -81,3 +84,4 @@ class CauseAnalysisResult(BaseModel):
     data_sufficient: bool
     has_historical_cases: bool
     causes: list[AnomalyCauseRead]
+

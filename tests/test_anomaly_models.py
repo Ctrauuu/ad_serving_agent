@@ -1,7 +1,9 @@
 from app.models import (
     AnomalyCause,
     AnomalyRecord,
+    ApprovalRecord,
     CaseLibrary,
+    InterventionSuggestion,
     MonitorRule,
     SalesFeedback,
 )
@@ -39,3 +41,44 @@ def test_cause_models_match_existing_tables() -> None:
         index.name
         for index in CaseLibrary.__table__.indexes
     } == {"idx_effectiveness", "idx_type"}
+
+
+def test_suggestion_model_matches_existing_table() -> None:
+    """验证干预建议模型映射到既有数据库表和索引。"""
+    assert (
+        InterventionSuggestion.__tablename__
+        == "intervention_suggestion"
+    )
+    assert {
+        index.name
+        for index in InterventionSuggestion.__table__.indexes
+    } == {"idx_anomaly", "idx_campaign_status"}
+    assert (
+        InterventionSuggestion.__table__.c.risk_level.server_default
+        is not None
+    )
+    assert (
+        InterventionSuggestion.__table__.c.is_primary.server_default
+        is not None
+    )
+    assert (
+        InterventionSuggestion.__table__.c.status.server_default
+        is not None
+    )
+
+
+def test_approval_model_matches_existing_table() -> None:
+    """验证审批记录模型映射到既有数据库表和索引。"""
+    assert ApprovalRecord.__tablename__ == "approval_record"
+    assert {
+        index.name
+        for index in ApprovalRecord.__table__.indexes
+    } == {"idx_status", "idx_approver"}
+    assert (
+        ApprovalRecord.__table__.c.auto_execute.server_default
+        is not None
+    )
+    assert (
+        ApprovalRecord.__table__.c.status.server_default
+        is not None
+    )

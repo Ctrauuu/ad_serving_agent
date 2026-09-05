@@ -110,6 +110,45 @@ class MilvusService:
                 index_params=anomaly_index,
             )
 
+        if not self._client.has_collection(
+            settings.milvus_intervention_case_collection
+        ):
+            intervention_schema = (
+                MilvusClient.create_schema(
+                    auto_id=False,
+                    enable_dynamic_field=False,
+                )
+            )
+            intervention_schema.add_field(
+                field_name="case_id",
+                datatype=DataType.INT64,
+                is_primary=True,
+            )
+            intervention_schema.add_field(
+                field_name="intervention_vector",
+                datatype=DataType.FLOAT_VECTOR,
+                dim=settings.milvus_vector_dim,
+            )
+
+            intervention_index = (
+                self._client.prepare_index_params()
+            )
+            intervention_index.add_index(
+                field_name="intervention_vector",
+                index_type="AUTOINDEX",
+                metric_type="COSINE",
+            )
+
+            self._client.create_collection(
+                collection_name=(
+                    settings
+                    .milvus_intervention_case_collection
+                ),
+                schema=intervention_schema,
+                index_params=intervention_index,
+            )
+
+
     def check(self) -> None:
         """检查依赖服务是否可用。
 
@@ -251,6 +290,86 @@ class MilvusService:
             ),
             data=[scene_vector],
             anns_field="scene_vector",
+            limit=limit,
+            search_params={
+                "metric_type": "COSINE",
+                "params": {},
+            },
+            consistency_level="Strong",
+        )
+
+        hits = results[0] if results else []
+
+        return [
+            {
+                "case_id": int(hit["case_id"]),
+                "score": float(hit["distance"]),
+            }
+            for hit in hits
+        ]
+
+    async def upsert_intervention_case_vector(
+        self,
+        case_id: int,
+        intervention_vector: list[float],
+    ) -> None:
+        """写入或更新历史干预案例向量。
+
+        Args:
+            case_id: MySQL case_library 中的案例编号。
+            intervention_vector: 历史干预案例的语义向量。
+
+        Returns:
+            无返回值。
+
+        Raises:
+            RuntimeError: Milvus 客户端尚未初始化。
+        """
+        client = self._require_client()
+        settings = get_settings()
+
+        await to_thread(
+            client.upsert,
+            collection_name=(
+                settings.milvus_intervention_case_collection
+            ),
+            data=[
+                {
+                    "case_id": case_id,
+                    "intervention_vector": (
+                        intervention_vector
+                    ),
+                }
+            ],
+        )
+
+    async def search_similar_intervention_cases(
+        self,
+        intervention_vector: list[float],
+        limit: int = 5,
+    ) -> list[dict[str, int | float]]:
+        """根据当前异常及原因召回相似干预案例。
+
+        Args:
+            intervention_vector: 当前异常场景与原因的查询向量。
+            limit: 最多召回的案例数量。
+
+        Returns:
+            按相似度从高到低排列的案例编号和分数。
+
+        Raises:
+            RuntimeError: Milvus 客户端尚未初始化。
+        """
+        client = self._require_client()
+        settings = get_settings()
+
+        results = await to_thread(
+            client.search,
+            collection_name=(
+                settings.milvus_intervention_case_collection
+            ),
+            data=[intervention_vector],
+            anns_field="intervention_vector",
             limit=limit,
             search_params={
                 "metric_type": "COSINE",

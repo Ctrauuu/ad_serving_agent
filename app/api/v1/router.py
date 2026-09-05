@@ -5,6 +5,8 @@ from app.api.v1.campaigns import router as campaigns_router
 from app.api.v1.catalog import router as catalog_router
 from app.api.v1.ad_tasks import router as ad_tasks_router
 from app.api.v1.ad_groups import (router as ad_groups_router)
+from app.api.v1.anomalies import router as anomalies_router
+from app.api.v1.approvals import router as approvals_router
 from app.api.v1.monitor_rules import router as monitor_rules_router
 
 router = APIRouter(prefix="/api/v1")
@@ -15,3 +17,5 @@ router.include_router(ad_tasks_router,tags=["ad-tasks"])
 router.include_router(health_router, tags=["health"])
 router.include_router(ad_groups_router,tags=["ad-groups"])
 router.include_router(monitor_rules_router)
+router.include_router(anomalies_router)
+router.include_router(approvals_router)

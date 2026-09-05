@@ -29,7 +29,27 @@ from app.services.anomaly import (
     list_monitor_rules,
     scan_campaign_anomalies,
 )
-from app.services.cause import collect_attribution_signals
+from app.services.cause import (
+    analyze_anomaly_cause,
+    build_evidence_catalog,
+    collect_attribution_signals,
+    format_anomaly_scene,
+    generate_cause_hypotheses,
+    get_anomaly_cause_result,
+    retrieve_similar_cases,
+)
+from app.services.suggestion import (
+    generate_intervention_suggestions,
+    get_intervention_suggestion_result,
+)
+from app.services.approval import (
+    approve_approval,
+    expire_pending_approvals,
+    get_approval_detail,
+    list_approvals,
+    reject_approval,
+    submit_suggestion_for_approval,
+)
 
 __all__ = [
     "authenticate_user",
@@ -55,4 +75,18 @@ __all__ = [
     "list_campaign_anomalies",
     "scan_campaign_anomalies",
     "collect_attribution_signals",
+    "analyze_anomaly_cause",
+    "build_evidence_catalog",
+    "format_anomaly_scene",
+    "generate_cause_hypotheses",
+    "get_anomaly_cause_result",
+    "retrieve_similar_cases",
+    "generate_intervention_suggestions",
+    "get_intervention_suggestion_result",
+    "approve_approval",
+    "expire_pending_approvals",
+    "get_approval_detail",
+    "list_approvals",
+    "reject_approval",
+    "submit_suggestion_for_approval",
 ]
