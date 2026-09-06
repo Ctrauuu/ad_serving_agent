@@ -137,3 +137,24 @@ async def test_upsert_and_search_intervention_case_vectors() -> None:
     assert search_args["limit"] == 4
     assert search_args["search_params"]["metric_type"] == "COSINE"
     assert matches == [{"case_id": 31, "score": 0.93}]
+
+
+@pytest.mark.asyncio
+async def test_upsert_knowledge_vector_uses_document_id() -> None:
+    """验证复盘知识文档以 knowledge_doc 编号写入知识集合。"""
+    service = MilvusService()
+    client = MagicMock()
+    service._client = client
+    vector = [0.4] * 1024
+
+    await service.upsert_knowledge_vector(
+        knowledge_doc_id=41,
+        vector=vector,
+    )
+
+    assert client.upsert.call_args.kwargs["data"] == [
+        {
+            "id": 41,
+            "vector": vector,
+        }
+    ]

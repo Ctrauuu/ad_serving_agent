@@ -38,6 +38,7 @@ from app.schemas import (
     RealtimeMetricResult,
     MetricTrendResult,
     MetricTrendWindow,
+    ReviewReportRead,
 )
 from app.services.campaign import (
     create_campaign,
@@ -64,6 +65,10 @@ from app.services.metric import (
 from app.services.anomaly import (
     list_campaign_anomalies,
     scan_campaign_anomalies,
+)
+from app.services.review import (
+    generate_campaign_review,
+    get_latest_review_report,
 )
 
 
@@ -749,3 +754,100 @@ async def campaign_anomaly_list(
         AnomalyRecordRead.model_validate(record)
         for record in records
     ]
+
+@router.post(
+    "/{campaign_id}/review/generate",
+    response_model=None,
+)
+async def campaign_generate_review(
+    campaign_id: CampaignId,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> ReviewReportRead:
+    """为已结束活动生成一版复盘报告并沉淀知识。
+
+    Args:
+        campaign_id: 活动编号。
+        session: 数据库异步会话。
+        current_user: 当前登录用户。
+
+    Returns:
+        新生成的复盘报告。
+
+    Raises:
+        HTTPException: 活动不存在时返回 404；
+            活动状态不允许复盘时返回 422。
+    """
+    campaign = await get_campaign(
+        session,
+        campaign_id,
+        current_user,
+    )
+
+    if campaign is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="活动不存在",
+        )
+
+    try:
+        report = await generate_campaign_review(
+            session,
+            campaign,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=(
+                status.HTTP_422_UNPROCESSABLE_CONTENT
+            ),
+            detail=str(exc),
+        ) from exc
+
+    return ReviewReportRead.model_validate(report)
+
+@router.get(
+    "/{campaign_id}/review",
+    response_model=None,
+)
+async def campaign_review_detail(
+    campaign_id: CampaignId,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> ReviewReportRead:
+    """查询当前用户可访问活动的最新复盘报告。
+
+    Args:
+        campaign_id: 活动编号。
+        session: 数据库异步会话。
+        current_user: 当前登录用户。
+
+    Returns:
+        版本最高的复盘报告。
+
+    Raises:
+        HTTPException: 活动不存在或没有生成复盘报告时返回 404。
+    """
+    campaign = await get_campaign(
+        session,
+        campaign_id,
+        current_user,
+    )
+
+    if campaign is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="活动不存在",
+        )
+
+    report = await get_latest_review_report(
+        session,
+        campaign.id,
+    )
+
+    if report is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="复盘报告不存在",
+        )
+
+    return ReviewReportRead.model_validate(report)

@@ -7,7 +7,7 @@ from app.schemas import GoalParseResult, StructuredGoal
 from app.api.dependencies.auth import get_current_user
 from app.infrastructure.database import get_session
 from app.main import app
-from app.models import Campaign, User
+from app.models import Campaign, ReviewReport, User
 
 
 def make_campaign() -> Campaign:
@@ -299,6 +299,97 @@ def test_parse_goal_returns_structured_result(monkeypatch) -> None:
         == "企业HR系统"
     )
     assert response.json()["data"]["missing_fields"] == []
+
+
+def test_generate_review_returns_new_report(monkeypatch) -> None:
+    """验证已结束活动可通过接口生成并返回复盘报告。"""
+    campaign = make_campaign()
+    campaign.status = "已结束"
+    report = ReviewReport(
+        id=5,
+        campaign_id=8,
+        version=2,
+        overall_metrics={"cost": 100.0},
+        strategy_evaluation={"verdict": "达标"},
+        intervention_evaluation={},
+        reusable_conclusion="可复用结论",
+        lessons="经验",
+        improvement="改进",
+        generated_at=datetime(2026, 9, 6, 12),
+    )
+
+    async def fake_get_campaign(*_):
+        return campaign
+
+    async def fake_generate(session, selected_campaign):
+        assert selected_campaign is campaign
+        return report
+
+    monkeypatch.setattr(
+        "app.api.v1.campaigns.get_campaign",
+        fake_get_campaign,
+    )
+    monkeypatch.setattr(
+        "app.api.v1.campaigns.generate_campaign_review",
+        fake_generate,
+    )
+
+    response = TestClient(app).post(
+        "/api/v1/campaigns/8/review/generate"
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"]["version"] == 2
+    assert response.json()["data"]["reusable_conclusion"] == (
+        "可复用结论"
+    )
+
+
+def test_generate_review_returns_404_for_missing_campaign(
+    monkeypatch,
+) -> None:
+    """验证复盘接口不泄露不存在或无权活动的信息。"""
+    async def fake_get_campaign(*_):
+        return None
+
+    monkeypatch.setattr(
+        "app.api.v1.campaigns.get_campaign",
+        fake_get_campaign,
+    )
+
+    response = TestClient(app).post(
+        "/api/v1/campaigns/999/review/generate"
+    )
+
+    assert response.status_code == 404
+    assert response.json()["message"] == "活动不存在"
+
+
+def test_generate_review_maps_invalid_state_to_422(monkeypatch) -> None:
+    """验证服务层活动状态错误会转换为客户端可处理的 422。"""
+    campaign = make_campaign()
+
+    async def fake_get_campaign(*_):
+        return campaign
+
+    async def fake_generate(*_):
+        raise ValueError("活动尚未结束，不能生成复盘")
+
+    monkeypatch.setattr(
+        "app.api.v1.campaigns.get_campaign",
+        fake_get_campaign,
+    )
+    monkeypatch.setattr(
+        "app.api.v1.campaigns.generate_campaign_review",
+        fake_generate,
+    )
+
+    response = TestClient(app).post(
+        "/api/v1/campaigns/8/review/generate"
+    )
+
+    assert response.status_code == 422
+    assert response.json()["message"] == "活动尚未结束，不能生成复盘"
 
 def test_confirm_goal_returns_updated_campaign(monkeypatch) -> None:
     async def fake_update_campaign(
@@ -658,3 +749,76 @@ def test_list_ad_tasks_returns_task_tree(monkeypatch) -> None:
         "status": "投放中",
         "plans": [],
     }
+
+
+def test_get_review_returns_latest_report(monkeypatch) -> None:
+    """验证复盘查询接口返回服务层提供的最新版本。"""
+    report = ReviewReport(
+        id=5,
+        campaign_id=8,
+        version=3,
+        overall_metrics={},
+        strategy_evaluation={},
+        intervention_evaluation={},
+        generated_at=datetime(2026, 9, 6, 12),
+    )
+
+    async def fake_get_campaign(*_):
+        return make_campaign()
+
+    async def fake_get_latest_report(session, campaign_id):
+        assert campaign_id == 8
+        return report
+
+    monkeypatch.setattr(
+        "app.api.v1.campaigns.get_campaign",
+        fake_get_campaign,
+    )
+    monkeypatch.setattr(
+        "app.api.v1.campaigns.get_latest_review_report",
+        fake_get_latest_report,
+    )
+
+    response = TestClient(app).get("/api/v1/campaigns/8/review")
+
+    assert response.status_code == 200
+    assert response.json()["data"]["version"] == 3
+
+
+def test_get_review_returns_404_when_report_absent(monkeypatch) -> None:
+    """验证活动存在但尚未复盘时返回明确的 404。"""
+    async def fake_get_campaign(*_):
+        return make_campaign()
+
+    async def fake_get_latest_report(*_):
+        return None
+
+    monkeypatch.setattr(
+        "app.api.v1.campaigns.get_campaign",
+        fake_get_campaign,
+    )
+    monkeypatch.setattr(
+        "app.api.v1.campaigns.get_latest_review_report",
+        fake_get_latest_report,
+    )
+
+    response = TestClient(app).get("/api/v1/campaigns/8/review")
+
+    assert response.status_code == 404
+    assert response.json()["message"] == "复盘报告不存在"
+
+
+def test_get_review_returns_404_when_campaign_absent(monkeypatch) -> None:
+    """验证无权或不存在活动时不会查询或泄露复盘内容。"""
+    async def fake_get_campaign(*_):
+        return None
+
+    monkeypatch.setattr(
+        "app.api.v1.campaigns.get_campaign",
+        fake_get_campaign,
+    )
+
+    response = TestClient(app).get("/api/v1/campaigns/999/review")
+
+    assert response.status_code == 404
+    assert response.json()["message"] == "活动不存在"

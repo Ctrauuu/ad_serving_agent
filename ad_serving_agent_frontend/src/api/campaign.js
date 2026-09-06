@@ -33,3 +33,6 @@ export const getActionRecords = (campaignId) => http.get('/actions', { params: {
 export const getActionRecord = (id) => http.get(`/actions/${id}`)
 export const rollbackAction = (id) => http.post(`/actions/${id}/rollback`)
 export const executeApprovalAction = (id) => http.post(`/approvals/${id}/execute`)
+export const getReview = (id, config) => http.get(`/campaigns/${id}/review`, config)
+export const generateReview = (id) => http.post(`/campaigns/${id}/review/generate`)
+export const getCases = () => http.get('/cases')

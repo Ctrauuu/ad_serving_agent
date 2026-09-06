@@ -9,6 +9,7 @@ import MonitorDashboard from '../views/MonitorDashboard.vue'
 import AnomalyCause from '../views/AnomalyCause.vue'
 import SuggestionApproval from '../views/SuggestionApproval.vue'
 import ActionRecords from '../views/ActionRecords.vue'
+import ReviewReport from '../views/ReviewReport.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -24,6 +25,7 @@ const router = createRouter({
     { path: '/campaigns/:id/anomalies', component: AnomalyCause, meta: { requiresAuth: true } },
     { path: '/campaigns/:id/suggestions', component: SuggestionApproval, meta: { requiresAuth: true } },
     { path: '/campaigns/:id/actions', component: ActionRecords, meta: { requiresAuth: true } },
+    { path: '/campaigns/:id/review', component: ReviewReport, meta: { requiresAuth: true } },
   ],
 })
 

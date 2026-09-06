@@ -55,6 +55,7 @@ from app.services.action import (
     list_action_executions,
     rollback_action,
 )
+from app.services.review import get_overall_metrics
 
 __all__ = [
     "authenticate_user",
@@ -97,4 +98,5 @@ __all__ = [
     "execute_approved_action",
     "list_action_executions",
     "rollback_action",
+    "get_overall_metrics",
 ]

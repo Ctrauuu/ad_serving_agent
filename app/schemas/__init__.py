@@ -83,6 +83,14 @@ from app.schemas.metric import (
     RealtimeMetric,
     RealtimeMetricResult,
 )
+from app.schemas.review import (
+    CaseEffectiveness,
+    CaseLibraryRead,
+    ReviewCaseCandidate,
+    ReviewCaseType,
+    ReviewGenerationOutput,
+    ReviewReportRead,
+)
 
 __all__ = [
     "ActionExecutionRead",
@@ -153,6 +161,12 @@ __all__ = [
     "MetricDimension",
     "RealtimeMetric",
     "RealtimeMetricResult",
+    "ReviewReportRead",
+    "CaseEffectiveness",
+    "CaseLibraryRead",
+    "ReviewCaseCandidate",
+    "ReviewCaseType",
+    "ReviewGenerationOutput",
     "MetricTrendPoint",
     "MetricTrendResult",
     "MetricTrendSeries",

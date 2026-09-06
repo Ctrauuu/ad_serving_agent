@@ -388,6 +388,37 @@ class MilvusService:
             for hit in hits
         ]
 
+    async def upsert_knowledge_vector(
+        self,
+        knowledge_doc_id: int,
+        vector: list[float],
+    ) -> None:
+        """写入或更新复盘知识文档向量。
+
+        Args:
+            knowledge_doc_id: MySQL knowledge_doc 的文档编号。
+            vector: 文档全文对应的 1024 维语义向量。
+
+        Returns:
+            无返回值。
+
+        Raises:
+            RuntimeError: Milvus 客户端尚未初始化。
+        """
+        client = self._require_client()
+        settings = get_settings()
+
+        await to_thread(
+            client.upsert,
+            collection_name=settings.milvus_collection,
+            data=[
+                {
+                    "id": knowledge_doc_id,
+                    "vector": vector,
+                }
+            ],
+        )
+
     def close(self) -> None:
         """关闭客户端连接。
 
