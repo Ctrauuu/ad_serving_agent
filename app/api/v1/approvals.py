@@ -15,8 +15,13 @@ from app.api.dependencies.auth import (
     require_role,
 )
 from app.api.routing import UnifiedResponseRoute
-from app.models import InterventionSuggestion, User
+from app.models import (
+    ApprovalRecord,
+    InterventionSuggestion,
+    User,
+)
 from app.schemas import (
+    ActionExecutionRead,
     ApprovalDecisionRequest,
     ApprovalDetail,
     ApprovalRejectRequest,
@@ -29,6 +34,7 @@ from app.services.approval import (
     reject_approval,
     submit_suggestion_for_approval,
 )
+from app.services.action import execute_approved_action
 from app.services.campaign import get_campaign
 
 
@@ -273,3 +279,74 @@ async def approval_reject(
         )
 
     return result
+
+
+@router.post(
+    "/approvals/{approval_id}/execute",
+    response_model=None,
+)
+async def approval_execute(
+    approval_id: ApprovalId,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> ActionExecutionRead:
+    """执行一条已经通过审批的广告平台动作。 
+
+    Args:
+        approval_id: 已通过的审批记录编号。
+        session: 数据库异步会话。
+        current_user: 当前登录并触发执行的用户。
+
+    Returns:
+        包含执行状态、前后快照和工具结果的动作记录。
+
+    Raises:
+        HTTPException: 审批不存在、当前用户无权访问，
+            或审批及目标状态不允许执行。
+    """
+    approval = await session.get(
+        ApprovalRecord,
+        approval_id,
+    )
+
+    if approval is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="审批记录不存在",
+        )
+
+    campaign = await get_campaign(
+        session,
+        approval.campaign_id,
+        current_user,
+    )
+
+    if campaign is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="审批记录不存在",
+        )
+
+    try:
+        execution = await execute_approved_action(
+            session,
+            approval_id,
+            current_user,
+        )
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(
+            status_code=(
+                status.HTTP_422_UNPROCESSABLE_CONTENT
+            ),
+            detail=str(exc),
+        ) from exc
+
+    if execution is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="审批记录不存在",
+        )
+
+    return ActionExecutionRead.model_validate(
+        execution
+    )

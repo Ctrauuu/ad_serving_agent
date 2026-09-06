@@ -50,6 +50,11 @@ from app.services.approval import (
     reject_approval,
     submit_suggestion_for_approval,
 )
+from app.services.action import (
+    execute_approved_action,
+    list_action_executions,
+    rollback_action,
+)
 
 __all__ = [
     "authenticate_user",
@@ -89,4 +94,7 @@ __all__ = [
     "list_approvals",
     "reject_approval",
     "submit_suggestion_for_approval",
+    "execute_approved_action",
+    "list_action_executions",
+    "rollback_action",
 ]

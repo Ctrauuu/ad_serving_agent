@@ -1,4 +1,9 @@
 from app.schemas.auth import LoginRequest, LoginResult, Role, UserInfo
+from app.schemas.action import (
+    ActionExecutionRead,
+    ActionExecutionStatus,
+    ActionRollbackStatus,
+)
 from app.schemas.approval import (
     ApprovalDecisionRequest,
     ApprovalDetail,
@@ -80,6 +85,9 @@ from app.schemas.metric import (
 )
 
 __all__ = [
+    "ActionExecutionRead",
+    "ActionExecutionStatus",
+    "ActionRollbackStatus",
     "ApprovalDecisionRequest",
     "ApprovalDetail",
     "ApprovalRecordRead",

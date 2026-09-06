@@ -8,12 +8,14 @@ from app.models.suggestion import InterventionSuggestion
 from app.models.ad_task import AdGroup, AdPlan, Keyword
 from app.models.anomaly import AnomalyRecord, MonitorRule
 from app.models.approval import ApprovalRecord
+from app.models.action import ActionExecution
 from app.models.metric import (
     AdMetricRealtime,
     BudgetConsumption,
 )
 
 __all__ = [
+    "ActionExecution",
     "AdGroup",
     "AdPlan",
     "Audience",

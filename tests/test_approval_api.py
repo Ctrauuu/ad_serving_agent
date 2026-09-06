@@ -7,7 +7,13 @@ from fastapi.testclient import TestClient
 from app.api.dependencies.auth import get_current_user
 from app.infrastructure.database import get_session
 from app.main import app
-from app.models import Campaign, InterventionSuggestion, User
+from app.models import (
+    ActionExecution,
+    ApprovalRecord,
+    Campaign,
+    InterventionSuggestion,
+    User,
+)
 from app.schemas import (
     ApprovalDetail,
     ApprovalRecordRead,
@@ -79,6 +85,35 @@ def make_approval_detail() -> ApprovalDetail:
                 suggestion
             )
         ),
+    )
+
+
+def make_action_execution() -> ActionExecution:
+    """构造执行动作接口的成功响应记录。
+
+    Returns:
+        包含前后状态快照的成功执行记录。
+    """
+    now = datetime(2026, 9, 6, 12)
+    return ActionExecution(
+        id=6,
+        approval_id=4,
+        suggestion_id=4,
+        campaign_id=8,
+        target_type="ad_group",
+        target_id=32,
+        action_type="pause",
+        action_params={"ad_group_id": 32},
+        before_state={"status": "已上线"},
+        after_state={"status": "已暂停"},
+        tool_name="pause_ad_group",
+        tool_result={"status": "已暂停"},
+        executor_id=7,
+        status="成功",
+        error_message=None,
+        rollback_status="可回滚",
+        executed_at=now,
+        created_at=now,
     )
 
 
@@ -415,3 +450,107 @@ def test_approval_reject_requires_nonblank_reason() -> None:
     )
 
     assert response.status_code == 422
+
+
+def test_approval_execute_returns_action_record(
+    monkeypatch: pytest.MonkeyPatch,
+    override_approval_dependencies: AsyncMock,
+) -> None:
+    """验证执行接口返回动作结果和前后状态快照。"""
+    override_approval_dependencies.get.return_value = (
+        ApprovalRecord(
+            id=4,
+            suggestion_id=4,
+            campaign_id=8,
+            status="已通过",
+        )
+    )
+    monkeypatch.setattr(
+        "app.api.v1.approvals.get_campaign",
+        AsyncMock(return_value=Campaign(id=8, owner_id=7)),
+    )
+    execute = AsyncMock(return_value=make_action_execution())
+    monkeypatch.setattr(
+        "app.api.v1.approvals.execute_approved_action",
+        execute,
+    )
+
+    response = TestClient(app).post(
+        "/api/v1/approvals/4/execute"
+    )
+
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["status"] == "成功"
+    assert data["before_state"]["status"] == "已上线"
+    assert data["after_state"]["status"] == "已暂停"
+    assert execute.await_args.args[1] == 4
+    assert execute.await_args.args[2].id == 7
+
+
+def test_approval_execute_hides_inaccessible_campaign(
+    monkeypatch: pytest.MonkeyPatch,
+    override_approval_dependencies: AsyncMock,
+) -> None:
+    """验证无活动权限时不调用动作执行服务。"""
+    override_approval_dependencies.get.return_value = (
+        ApprovalRecord(
+            id=4,
+            suggestion_id=4,
+            campaign_id=8,
+            status="已通过",
+        )
+    )
+    monkeypatch.setattr(
+        "app.api.v1.approvals.get_campaign",
+        AsyncMock(return_value=None),
+    )
+    execute = AsyncMock()
+    monkeypatch.setattr(
+        "app.api.v1.approvals.execute_approved_action",
+        execute,
+    )
+
+    response = TestClient(app).post(
+        "/api/v1/approvals/4/execute"
+    )
+
+    assert response.status_code == 404
+    assert response.json()["message"] == "审批记录不存在"
+    execute.assert_not_awaited()
+
+
+def test_approval_execute_returns_422_for_invalid_state(
+    monkeypatch: pytest.MonkeyPatch,
+    override_approval_dependencies: AsyncMock,
+) -> None:
+    """验证不可执行的审批状态被转换为 422。"""
+    override_approval_dependencies.get.return_value = (
+        ApprovalRecord(
+            id=4,
+            suggestion_id=4,
+            campaign_id=8,
+            status="待审批",
+        )
+    )
+    monkeypatch.setattr(
+        "app.api.v1.approvals.get_campaign",
+        AsyncMock(return_value=Campaign(id=8, owner_id=7)),
+    )
+    monkeypatch.setattr(
+        "app.api.v1.approvals.execute_approved_action",
+        AsyncMock(
+            side_effect=ValueError(
+                "审批尚未通过，不能执行动作"
+            )
+        ),
+    )
+
+    response = TestClient(app).post(
+        "/api/v1/approvals/4/execute"
+    )
+
+    assert response.status_code == 422
+    assert response.json()["message"] == (
+        "审批尚未通过，不能执行动作"
+    )

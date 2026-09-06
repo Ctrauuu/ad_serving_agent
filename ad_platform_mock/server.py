@@ -170,13 +170,16 @@ def create_ad_group(
 def get_ad_status(
     platform_id: str,
 ) -> dict[str, Any]:
-    """查询平台任务状态，首次查询后模拟审核通过。
+    """查询平台对象并返回完整状态快照。
 
     Args:
-        platform_id: 平台计划或广告组 ID。
+        platform_id: 平台广告计划或广告组 ID。
 
     Returns:
-        平台任务类型及最新状态。
+        平台对象当前的完整可审计状态，不包含内部计数器。
+
+    Raises:
+        ValueError: 平台对象不存在。
     """
     entity = _find_entity(platform_id)
 
@@ -184,9 +187,9 @@ def get_ad_status(
         entity["status"] = "已上线"
 
     return {
-        "platform_id": platform_id,
-        "entity_type": entity["entity_type"],
-        "status": entity["status"],
+        key: value
+        for key, value in entity.items()
+        if key != "metric_reads"
     }
 
 
@@ -298,6 +301,52 @@ def adjust_bid(
     return {
         "ad_platform_group_id": ad_platform_group_id,
         "bid": bid,
+        "status": group["status"],
+    }
+
+
+@mcp.tool()
+def replace_creative(
+    ad_platform_group_id: str,
+    creative_id: int,
+) -> dict[str, Any]:
+    """替换广告组使用的素材。
+
+    Args:
+        ad_platform_group_id: 平台广告组 ID。
+        creative_id: 替换后的素材编号。
+
+    Returns:
+        广告组 ID、替换前后素材编号和当前状态。
+
+    Raises:
+        ValueError: 素材编号无效或广告组不存在。
+    """
+    if creative_id <= 0:
+        raise ValueError(
+            "creative_id 必须大于 0"
+        )
+
+    group = _groups.get(
+        ad_platform_group_id
+    )
+
+    if group is None:
+        raise ValueError("广告组不存在")
+
+    previous_creative_id = group[
+        "creative_id"
+    ]
+    group["creative_id"] = creative_id
+
+    return {
+        "ad_platform_group_id": (
+            ad_platform_group_id
+        ),
+        "previous_creative_id": (
+            previous_creative_id
+        ),
+        "creative_id": creative_id,
         "status": group["status"],
     }
 

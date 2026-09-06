@@ -6,6 +6,9 @@ import StrategyConfirm from '../views/StrategyConfirm.vue'
 import AdTasks from '../views/AdTasks.vue'
 import AdTaskDetail from '../views/AdTaskDetail.vue'
 import MonitorDashboard from '../views/MonitorDashboard.vue'
+import AnomalyCause from '../views/AnomalyCause.vue'
+import SuggestionApproval from '../views/SuggestionApproval.vue'
+import ActionRecords from '../views/ActionRecords.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -18,6 +21,9 @@ const router = createRouter({
     { path: '/campaigns/:id/ad-tasks', component: AdTasks, meta: { requiresAuth: true } },
     { path: '/campaigns/:id/ad-tasks/:taskId', component: AdTaskDetail, meta: { requiresAuth: true } },
     { path: '/campaigns/:id/monitor', component: MonitorDashboard, meta: { requiresAuth: true } },
+    { path: '/campaigns/:id/anomalies', component: AnomalyCause, meta: { requiresAuth: true } },
+    { path: '/campaigns/:id/suggestions', component: SuggestionApproval, meta: { requiresAuth: true } },
+    { path: '/campaigns/:id/actions', component: ActionRecords, meta: { requiresAuth: true } },
   ],
 })
 

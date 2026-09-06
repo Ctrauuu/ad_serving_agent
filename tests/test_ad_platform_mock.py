@@ -1,5 +1,7 @@
 from datetime import datetime
 
+import pytest
+
 from ad_platform_mock.server import (
     _groups,
     _plans,
@@ -11,6 +13,7 @@ from ad_platform_mock.server import (
     get_ad_status,
     mcp,
     pause_ad_group,
+    replace_creative,
     resume_ad_group,
 )
 
@@ -30,6 +33,7 @@ def test_mock_platform_tools_and_status_flow() -> None:
         "resume_ad_group",
         "adjust_budget",
         "adjust_bid",
+        "replace_creative",
         "get_ad_metrics",
     }
 
@@ -46,11 +50,20 @@ def test_mock_platform_tools_and_status_flow() -> None:
     group_id = group["ad_platform_group_id"]
 
     assert get_ad_status(plan_id)["status"] == "已上线"
-    assert get_ad_status(group_id)["status"] == "已上线"
+    group_state = get_ad_status(group_id)
+    assert group_state["status"] == "已上线"
+    assert group_state["budget_daily"] == 100
+    assert group_state["bid"] == 5
+    assert group_state["creative_id"] == 1
+    assert "metric_reads" not in group_state
     assert pause_ad_group(group_id)["status"] == "已暂停"
     assert resume_ad_group(group_id)["status"] == "已上线"
     assert adjust_budget(group_id, 120)["budget_daily"] == 120
     assert adjust_bid(group_id, 6)["bid"] == 6
+    replaced = replace_creative(group_id, 2)
+    assert replaced["previous_creative_id"] == 1
+    assert replaced["creative_id"] == 2
+    assert get_ad_status(group_id)["creative_id"] == 2
     metrics = get_ad_metrics(group_id)
 
     assert set(metrics) == {
@@ -75,3 +88,6 @@ def test_mock_platform_tools_and_status_flow() -> None:
         <= metrics["impressions"]
     )
     assert datetime.fromisoformat(metrics["data_time"])
+
+    with pytest.raises(ValueError, match="creative_id"):
+        replace_creative(group_id, 0)
